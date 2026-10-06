@@ -106,10 +106,10 @@ The built-in pages remain as each figure's home page (the home button).
 With an API key the figures answer in their own words, like a normal chatbot,
 and stay in character. Two providers are supported; use whichever key you have.
 
-| Provider | Where to get a key | Line in the start file | Default model |
-|---|---|---|---|
-| Claude (Anthropic) 
-| Gemini (Google) 
+| Provider | Where to get a key | 
+
+| Claude (Anthropic) https://platform.claude.com/
+| Gemini (Google) https://aistudio.google.com/api-keys
 
 1. Open the file named `.env` in a text editor (Notepad is fine).
 2. Paste your key after the `=` on the matching line, with no spaces or
