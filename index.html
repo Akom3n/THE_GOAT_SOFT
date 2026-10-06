@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Интерактивна библиотека</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3ead8; --paper-2:#eadfc8; --paper-3:#fbf5e8; --ink:#2a2118; --muted:#6b5d4d;
+  --accent:#8a2b1e; --rule:#c9b99a; --frame:#fff; --on-accent:#fff;
+  --display:"Playfair Display",Georgia,serif; --body:"PT Serif",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+:root[data-theme="dark"]{
+  --paper:#17130f; --paper-2:#211b15; --paper-3:#2b241c; --ink:#ece2cf; --muted:#a39480;
+  --accent:#d98a6a; --rule:#4a3f33; --frame:#2b241c; --on-accent:#17130f;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#17130f; --paper-2:#211b15; --paper-3:#2b241c; --ink:#ece2cf; --muted:#a39480;
+    --accent:#d98a6a; --rule:#4a3f33; --frame:#2b241c; --on-accent:#17130f;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+/* The app never scrolls as a whole: the guide stays put and the browser pane scrolls inside. */
+body{display:grid;grid-template-columns:minmax(0,1fr) 380px;height:100dvh;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.6}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ----- browser pane ----- */
+.browser{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--ink)}
+.tabs{display:flex;align-items:flex-end;gap:3px;padding:8px 10px 0;background:var(--paper-2);border-bottom:1px solid var(--ink);overflow-x:auto;scrollbar-width:none}
+.tabs a{flex:none;text-decoration:none;font-size:14px;line-height:1.3;padding:6px 14px 7px;border:1px solid var(--rule);border-bottom:0;border-radius:9px 9px 0 0;color:var(--muted);white-space:nowrap}
+.tabs a:hover{color:var(--ink)}
+.tabs a[aria-current="true"]{background:var(--paper);color:var(--ink);border-color:var(--ink);box-shadow:0 1px 0 var(--paper)}
+.bar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--rule)}
+.bar button{flex:none;height:32px;min-width:32px;padding:0 8px;border:1px solid var(--rule);border-radius:999px;background:none;font-size:14px;line-height:1}
+.bar button:hover{border-color:var(--ink)}
+#addrForm{flex:1;min-width:0;display:flex}
+#addr{width:100%;height:32px;border:1px solid var(--rule);border-radius:999px;background:var(--paper-2);padding:0 14px;font:13px var(--mono);color:var(--ink)}
+#addr:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.lang{display:flex;flex:none;border:1px solid var(--rule);border-radius:999px;overflow:hidden}
+.lang button{border:0;border-radius:0;height:30px;min-width:0;padding:0 9px;font-size:12px;letter-spacing:.08em}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+nav{display:flex;gap:18px;padding:6px 14px;font-size:14px;border-bottom:1px solid var(--rule);overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+nav a{text-decoration:none;padding:1px 0;border-bottom:2px solid transparent;color:var(--muted)}
+nav a:hover{color:var(--ink)}
+nav a[aria-current="page"]{border-color:var(--accent);color:var(--accent)}
+#load{flex:none;height:2px;width:0;background:var(--accent);opacity:0}
+#load.go{animation:load .55s ease-out}
+#load.busy{width:100%;opacity:1;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:busy 1s linear infinite}
+@keyframes busy{0%{background-position:-40% 0}100%{background-position:140% 0}}
+@keyframes load{0%{width:0;opacity:1}75%{width:100%;opacity:1}100%{width:100%;opacity:0}}
+#view{flex:1;min-height:0;overflow-y:auto}
+[hidden]{display:none!important}
+#web{flex:1;min-height:0;width:100%;border:0;background:var(--paper)}
+#find{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--rule);background:var(--paper-2)}
+#findq{flex:1;min-width:0;height:28px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);padding:0 10px;font:14px var(--body)}
+#findq:focus{outline:2px solid var(--accent);outline-offset:-1px}
+#findn{font:12px var(--mono);color:var(--muted);min-width:52px;text-align:center}
+#find button{height:28px;min-width:28px;border:1px solid var(--rule);border-radius:6px;background:none;font-size:13px;line-height:1}
+mark.hit{background:#ffe066;color:#1a1a1a;border-radius:2px;padding:0 1px}
+mark.hit.cur{background:#ff8a3d;box-shadow:0 0 0 2px #ff8a3d}
+.msg blockquote{margin:8px 0 0;padding:6px 0 0 10px;border-left:2px solid var(--rule);font-size:14px;font-style:italic;color:var(--muted)}
+
+/* ----- the page shown inside the browser ----- */
+.mast{text-align:center;padding:22px 24px 14px;border-bottom:3px double var(--rule)}
+.kicker{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-size:clamp(28px,4.4vw,48px);margin:2px 0 0;line-height:1.1}
+h1 a{text-decoration:none}
+.years{font-style:italic;color:var(--accent)}
+article{max-width:860px;margin:0 auto;padding:26px 28px 8px}
+article h2{font-family:var(--display);font-size:clamp(26px,3.4vw,38px);line-height:1.15;margin:0 0 6px}
+.lead{font-style:italic;font-size:20px;color:var(--muted);margin:0 0 22px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+article p{margin:0 0 16px;max-width:64ch}
+.facts{list-style:none;padding:0;margin:26px 0 0;border-top:1px solid var(--rule)}
+.facts li{display:flex;gap:16px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:16px}
+.facts b{font-family:var(--display);color:var(--accent);min-width:92px}
+.portrait{float:right;width:min(220px,38%);margin:0 0 16px 24px;padding:8px;background:var(--frame);border:1px solid var(--rule);box-shadow:0 2px 0 var(--rule)}
+.portrait img{display:block;width:100%;filter:sepia(.25)}
+.portrait figcaption{font-size:13px;color:var(--muted);text-align:center;padding-top:6px;font-style:italic}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:8px;clear:both}
+.card{display:block;text-decoration:none;border:1px solid var(--rule);padding:16px;background:var(--paper-2);transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.card h3{font-family:var(--display);margin:0 0 4px;font-size:19px}
+.card span{font-size:15px;color:var(--muted)}
+article p.proof{background:color-mix(in srgb,var(--accent) 15%,transparent);box-shadow:-8px 0 0 color-mix(in srgb,var(--accent) 15%,transparent),8px 0 0 color-mix(in srgb,var(--accent) 15%,transparent),-11px 0 0 var(--accent);margin-bottom:6px;animation:found 1.2s ease-out}
+@keyframes found{0%{background:color-mix(in srgb,var(--accent) 45%,transparent)}}
+article p.proof mark{background:color-mix(in srgb,var(--accent) 40%,transparent);color:inherit}
+article p.cite{font-size:13px;font-style:italic;color:var(--muted)}
+.sources{margin-top:28px;padding-top:14px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted)}
+.sources h3{font-family:var(--display);font-size:17px;color:var(--ink);margin:0 0 6px}
+.sources ul{margin:0 0 8px;padding-left:18px}
+.sources p{font-size:13px;margin:0}
+footer{text-align:center;font-size:13px;color:var(--muted);padding:20px 24px 28px}
+
+/* ----- the guide: always on screen ----- */
+.guide{display:flex;flex-direction:column;min-height:0;background:var(--paper-2)}
+#avatar{flex:none;height:210px;background:radial-gradient(circle at 50% 35%,var(--paper-3),var(--paper-2) 70%);border-bottom:1px solid var(--ink);display:grid;place-items:center;position:relative;overflow:hidden}
+#avatar .mono{width:136px;height:136px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--display);font-size:62px;font-style:italic;background:var(--paper);transition:box-shadow .2s;overflow:hidden}
+#avatar .mono img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;filter:sepia(.25)}
+#avatar.speaking .mono{box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 22%,transparent);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 16px color-mix(in srgb,var(--accent) 10%,transparent)}}
+.voice{position:absolute;right:8px;top:8px;background:var(--paper);border:1px solid var(--ink);font-size:12px;padding:3px 8px}
+#mode{flex:none;padding:7px 12px;font-size:13px;line-height:1.35;color:var(--muted);background:var(--paper);border-bottom:1px solid var(--rule);border-left:3px solid var(--accent)}
+#log{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{padding:9px 12px;font-size:16px;line-height:1.45;max-width:92%}
+.msg.aleko{background:var(--paper);border-left:3px solid var(--accent)}
+.msg.user{align-self:flex-end;background:var(--ink);color:var(--paper)}
+.msg.wait{color:var(--muted);font-style:italic}
+.msg .why{display:block;margin-top:6px;font-size:13px;color:var(--accent)}
+#form{flex:none;display:flex;border-top:1px solid var(--ink)}
+#form input{flex:1;min-width:0;border:0;background:var(--paper);padding:13px;font:inherit;font-size:16px;color:var(--ink)}
+#form input::placeholder{color:var(--muted)}
+#form input:focus{outline:2px solid var(--accent);outline-offset:-2px}
+#form button{border:0;background:var(--accent);color:var(--on-accent);padding:0 18px}
+#form button:disabled{opacity:.5}
+
+/* ----- phone: browser on top, guide docked underneath ----- */
+@media (max-width:860px){
+  body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 42dvh;font-size:17px}
+  .browser{border-right:0;border-bottom:1px solid var(--ink)}
+  .bar{gap:4px;padding:6px 8px}
+  #fwdBtn,#outBtn{display:none!important}
+  article{padding:18px 16px 4px}
+  .mast{padding:14px 16px 10px}
+  #avatar{height:56px;place-items:center start;padding-left:12px}
+  #avatar .mono{width:42px;height:42px;font-size:22px;border-width:1px}
+  .msg{font-size:15px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<main class="browser">
+  <div class="tabs" id="figs" aria-label="Figures"></div>
+  <div class="bar">
+    <button id="backBtn" aria-label="Back">←</button>
+    <button id="fwdBtn" aria-label="Forward">→</button>
+    <button id="homeBtn" aria-label="Home">⌂</button>
+    <button id="reloadBtn" aria-label="Reload">⟳</button>
+    <form id="addrForm" autocomplete="off"><input id="addr" spellcheck="false" aria-label="Address or question"></form>
+    <button id="outBtn" hidden aria-label="Open the original page in a new tab">↗</button>
+    <button id="themeBtn" aria-label="Theme"></button>
+    <div class="lang" role="group" aria-label="Language">
+      <button data-lang="bg">БГ</button><button data-lang="en">EN</button>
+    </div>
+  </div>
+  <nav id="nav"></nav>
+  <div id="load"></div>
+  <form id="find" hidden autocomplete="off">
+    <input id="findq" spellcheck="false" aria-label="Find in page">
+    <span id="findn"></span>
+    <button type="button" id="findPrev" aria-label="Previous match">↑</button>
+    <button type="button" id="findNext" aria-label="Next match">↓</button>
+    <button type="button" id="findClose" aria-label="Close">✕</button>
+  </form>
+  <iframe id="web" hidden sandbox="allow-same-origin" title="Web page"></iframe>
+  <div id="view">
+    <header class="mast">
+      <div class="kicker" id="kicker"></div>
+      <h1><a href="#/aleko/library" id="title"></a></h1>
+      <div class="years" id="years"></div>
+    </header>
+    <article id="page" aria-live="polite"></article>
+    <footer id="footer"></footer>
+  </div>
+</main>
+
+<aside class="guide">
+  <!-- 3D avatar mounts here: replace .mono with your canvas -->
+  <div id="avatar">
+    <div class="mono" id="mono">А</div>
+    <button class="voice" id="voiceBtn"></button>
+  </div>
+  <div id="mode" hidden></div>
+  <div id="log"></div>
+  <form id="form" autocomplete="off">
+    <input id="input" maxlength="400">
+    <button id="send"></button>
+  </form>
+</aside>
+
+<script>
+/* ---------- CONFIG ----------
+   Chat: the page POSTs to API_URL
+     { figure, lang, route, messages:[{role:"user"|"assistant", content}] }
+   and expects { text: "spoken reply", navigate_to: "/chicago" | null }.
+   Voice: the page POSTs to TTS_URL { figure, lang, text } and expects audio
+   bytes back (audio/mpeg). server.js implements this with a male voice per
+   figure. Both endpoints live on your backend, which holds the keys. If either
+   is unreachable the page falls back: canned demo replies for chat, and a
+   male browser voice for speech (silent if the device only has female ones). */
+const API_URL = "/api/chat";
+const TTS_URL = "/api/tts";
+const PAGE_URL = "/api/page";                    // server.js fetches non-Wikipedia sites for the browser pane
+const DEFAULT_FIGURE = "aleko";
+const MAX_TURNS = 8;
+
+const ALEKO = {
+  bg: {
+    kicker:"Интерактивна библиотека", title:"Алеко Константинов",
+    placeholder:"Попитайте Алеко…", send:"Питай", voiceOn:"Глас: вкл.", voiceOff:"Глас: изкл.",
+    dark:"Тъмно", light:"Светло",
+    wait:"Алеко размишлява…", caption:"Алеко Константинов",
+    credit:"Портрет и сведения: Уикипедия (CC BY-SA)",
+    hello:"Добре дошли, пътниче! Аз съм Алеко. Накъде ви води любопитството — към Чикаго, към Витоша или към страниците на моите сатири?",
+    fallback:"Любопитен въпрос! Нека ви покажа библиотеката — оттам пътищата водят навсякъде.",
+    pages:{
+      "/library":{nav:"Библиотека",h:"Библиотеката",lead:"Писател, адвокат, общественик — и човекът, който сам се нарече Щастливеца.",cards:true,
+        p:["Алеко Иваницов Константинов (1863–1897) е български писател, адвокат и общественик, основоположник на организираното туристическо движение в България. Най-известен е със своя герой Бай Ганьо. Изберете врата: зад всяка има по една глава от неговия кратък живот."]},
+      "/early-life":{nav:"Ранни години",h:"Свищов, Габрово, Николаев, Одеса",lead:"Детство край Дунава и ученически години в Русия.",
+        p:["Алеко е роден в Свищов на 1 януари 1863 г. по стар стил (13 януари по нов) в дома на видния търговец Иваница Хаджиконстантинов. По майчина линия е от големия видински род Шишманови.",
+           "Учи при частните учители Емануил Васкидович и Янко Мустаков, после в Свищовското училище (1872–1874) и в Априловската гимназия в Габрово (1874–1877). През Освободителната война, едва четиринадесетгодишен, е писар в канцеларията на свищовския губернатор Марко Балабанов.",
+           "На 14 юли 1877 г. руският император Александър II отсяда в бащината му къща и от балкона ѝ гледа как войските минават по моста през Дунава. Малкият Алеко е там — споменът му остава за цял живот.",
+           "След войната е възпитаник на Южнославянския пансион на Тодор Минков и завършва гимназия в Николаев през 1881 г. Там открива руската и световната литература, прави първите си литературни опити, свири на цигулка и дори се опитва да композира. Същата година започва право в Новорусийския университет в Одеса и се дипломира през 1885 г."],
+        f:[["1863","Роден в Свищов"],["1874–1877","Априловската гимназия, Габрово"],["1877","Писар при губернатора; Александър II в дома му"],["1881","Завършва гимназия в Николаев"],["1885","Завършва право в Одеса"]]},
+      "/public-life":{nav:"Право и общество",h:"Съдия, адвокат, гражданин",lead:"Два пъти уволнен — заради това, че не се огъва.",
+        p:["След завръщането си Алеко е съдия (1885–1886), прокурор (1886) в Софийския окръжен съд и помощник-прокурор (1886–1888). Уволнен е, защото се противопоставя на политическата намеса в съда. Става адвокат, после отново съдия в Софийския апелативен съд (1890–1892) — и отново е уволнен.",
+           "До края на живота си работи като адвокат на свободна практика в София; през 1896 г. е и юрисконсулт на градското управление. Същата година защитава хабилитационен труд за правото на помилване според новия наказателен закон, с намерение да преподава в Юридическия факултет на Софийския университет.",
+           "Участва в множество обществени начинания: училищен настоятел, член на Върховния македонски комитет, на настоятелството на „Славянска беседа“, на Народообразователното дружество, Музикалното общество, Театралния комитет, Дружеството за насърчаване на изкуствата и Комисията за насърчаване на местната индустрия.",
+           "Още от студент е привърженик на Петко Каравелов и неговите идеи за парламентаризъм и демокрация. Сътрудничи на списание Библиотека „Свети Климент“, членува в Демократическата партия, помага за програмата ѝ и пише във вестника ѝ „Знаме“ от основаването му през 1894 г."],
+        f:[["1885–1888","Съдия, прокурор, помощник-прокурор"],["1890–1892","Съдия в Апелативния съд"],["1894","Сътрудник на в. „Знаме“"],["1896","Хабилитационен труд за правото на помилване"]]},
+      "/chicago":{nav:"Пътешествия",h:"До Чикаго и назад",lead:"Париж, Прага, Чикаго — три изложения и една книга.",
+        p:["Алеко посещава Всемирното изложение в Париж (1889), Земското индустриално изложение в Прага (1891) и Колумбовото изложение в Чикаго (1893), където вижда и Ниагара.",
+           "Приятелите му го подтикват да запише впечатленията си като леки, „хвърчащи“ бележки. Така през 1893 г. се ражда пътеписът „До Чикаго и назад“, излязъл като книга през 1894 г. — първата му зряла творба и първата, която му носи литературна известност.",
+           "Това е първият български пътепис за пътуване отвъд границите на страната. Алеко гледа Америка с любопитство, но и с мярка: възхищава се на техниката и благосъстоянието и се възмущава от безчовечното в едно богато и добре подредено общество. Смее се почти на всичко — сериозен остава само пред природата, машините и социалните тревоги.",
+           "С тази книга пътеписът у нас престава да бъде географско описание и става пълноценна литература. Тя събужда и траен интерес към Чикаго, където днес живее най-голямата българска общност в Съединените щати."],
+        f:[["1889","Изложението в Париж"],["1891","Изложението в Прага"],["1893","Чикаго и Ниагара"],["1894","Книгата излиза"]]},
+      "/bay-ganyo":{nav:"Бай Ганьо",h:"Бай Ганьо",lead:"Невероятни разкази за един съвременен българин.",
+        p:["През 1895 г. Алеко събира фейлетоните си за Бай Ганьо — дребен пътуващ търговец на розово масло, тръгнал да забогатява чрез търговия и политика. Зад забавните му приключения стоят големите въпроси на времето: накъде върви България и какво става с нейните нрави и морал.",
+           "Книгата е поредица от анекдоти, разказвани в бохемска компания. Из Европа героят изпада в комични положения; той е скъперник, арогантен и недодялан, но не отблъсква, а разсмива.",
+           "Във втората част Бай Ганьо се връща у дома и започва да „прави“ политика. Смехът стихва и отстъпва на гняв и разочарование.",
+           "Никой образ не е обсъждан повече от българската критика: национален тип ли е той, или социален? Името му отдавна живее извън книгата — във вицове и като нарицателно. Смята се, че първообраз е карловският търговец Ганьо Сомов."],
+        f:[["1895","Фейлетоните за Бай Ганьо"],["Герой","Търговец на розово масло"],["Първообраз","Ганьо Сомов от Карлово"]]},
+      "/works":{nav:"Творчество",h:"Фейлетони, пътеписи, преводи",lead:"Над четиридесет фейлетона и седем псевдонима.",
+        p:["Първите му публикации са стихотворенията „Огледало“ (1880) и „Защо?“ (1881) във вестниците „Целокупна България“ и „Свободна България“. В Одеса пише поемата „Песен за Слобод-Маджара и Пламен-Теня“ (1883).",
+           "До края на живота си създава над 40 фейлетона, повечето по повод на конкретни събития. „Херострат II“ например е отговор на опита на княз Фердинанд да закрие читалище „Славянска беседа“. Темите му са потъпканите изборни права, министрите, депутатите и монархът. Във „Страст“ и „Честита Нова година“ се надсмива над самия себе си, а в цикъла „Разни хора, разни идеали“ рисува трайни човешки типове.",
+           "В пътеписи като „Невероятно наистина, но факт…“, „Какво? Швейцария ли?“ и „В Българска Швейцария“ възпява българската природа. През 1894 г. излиза разказът „Пази, боже, сляпо да прогледа“. Запазена е и една негова пиеса — „В сферата на фраковете и клаковете“, за пристигането на княз Фердинанд и дворцовия церемониал.",
+           "Превежда Пушкин („Бахчисарайски фонтан“, „Полтава“, „Цигани“), Лермонтов („Демон“, „Беглец“), Некрасов, Молиер („Тартюф“), Копе и Сарду. Неговите творби са преведени на около 30 езика.",
+           "Подписва се като Щастливеца, Башибозук, Беньо Наков, Евстати Хаджибалкански, Един от клуба на Моралното влияние, Великият Войн и Хъньо. Недовършени разкази, рисунки и писма се пазят в архива на проф. Петър Динеков."],
+        f:[["1880","„Огледало“ — първа публикация"],["40+","фейлетона"],["≈30","езика, на които е преведен"],["7","псевдонима"]]},
+      "/vitosha":{nav:"Витоша",h:"Черни връх",lead:"Началото на организирания туризъм в България.",
+        p:["Алеко е прочут с любовта си към природата и пътешествията. По негова инициатива на 27 август 1895 г. се осъществява първото масово изкачване на Черни връх — денят, от който се брои организираният туризъм у нас.",
+           "Горе на върха се учредява Клуб на българските туристи. Първото туристическо дружество, създадено през 1899 г., вече след смъртта му, приема неговото име.",
+           "Днес на Черни връх има паметник на Щастливеца, а местността и туристическият център „Алеко“ на Витоша носят името му."],
+        f:[["1894","Излет на Черни връх с приятели"],["1895","Първото масово изкачване, 27 август"],["1899","Туристическо дружество „Алеко Константинов“"]]},
+      "/assassination":{nav:"Радилово",h:"Нощта край Радилово",lead:"11 май 1897 г. (23 май по нов стил), празникът на Кирил и Методий.",
+        p:["Алеко пътува със съпартиеца си Михаил Такев от Пещера към Пазарджик. Пещера е родното място на Такев и неговият избирателен район; двамата са били там за празника на славянската писменост. По пътя спират в село Радилово.",
+           "Пещера и Радилово отдавна спорят за гори и общински мери, неведнъж и с насилие. Група радиловци, начело с кмета Петър Минков от Народната партия, решават да убият Такев.",
+           "Файтонът тръгва от Радилово след десет вечерта. В землището на съседното Кочагово Милош Топалов и Петър Салепов стрелят от засада и убиват Алеко. Разказва се, че малко преди това двамата приятели са разменили местата си.",
+           "Минков, Салепов и Топалов са осъдени на смърт; присъдата на непълнолетния Салепов е заменена с 15 години затвор. Пред съда те твърдят, че целта е бил Такев, но някои изследователи смятат, че засадата е била срещу двамата. Алеко е на 34 години. Погребан е в Централните софийски гробища, а Кочагово днес се казва Алеко Константиново."],
+        f:[["1897","Убит от засада"],["34","години"],["Присъда","Тримата извършители са осъдени на смърт"]]},
+      "/legacy":{nav:"Памет",h:"Памет",lead:"Какво остава след Щастливеца.",
+        p:["Родната му къща в Свищов е музей от 1979 г. и е сред 100-те национални туристически обекта. Наредбата ѝ е запазена, както е била, когато в нея е отсядал Александър II.",
+           "Името му носят улица в София, връх Алеко в Рила, нос Алеко на остров Ливингстън в Антарктика, Алековият кът в парка Аязмото в Стара Загора, местността „Алеко“ на Витоша и село Алеко Константиново.",
+           "Ликът му е върху банкнотата от 100 лева от 2003 г. В Чикаго негов бюст стои в библиотека „Регенщайн“ на Чикагския университет, а през 2017 г. кръстовище в града е наименувано в негова чест.",
+           "През 2003 г. излиза първият том от тритомната му биография от Гавраил Панчев."],
+        f:[["1979","Къща музей в Свищов"],["2003","Банкнотата от 100 лева"],["2017","Кръстовище в Чикаго"]]}
+    },
+    demo:[
+      [/банкнот|памет|бюст|наслед|наречен|музей/i,"/legacy",3,"Казват ми, че ликът ми стоял върху банкнота — аз, който рядко имах пари в джоба си! Елате да видите какво е останало след мен."],
+      [/фейлетон|превод|псевдоним|стихотвор|пушкин|творб|щастливец/i,"/works",5,"Писал съм под седем имена, но най-много ми прилича Щастливеца. Елате, ще ви покажа фейлетоните и преводите си."],
+      [/съд|адвокат|прокурор|уволн|каравелов|парти|право/i,"/public-life",1,"Два пъти ме уволниха от съда — изглежда правосъдието и аз се обичахме повече, отколкото на някои им се искаше. Елате да ви разкажа."],
+      [/чикаго|америк|ниагар|изложени|париж|прага|пътува/i,"/chicago",1,"Ах, Новият свят! Чикаго през 1893 г. беше истинско откровение — машини, шум и размах, каквито на Балканите не бяхме сънували. Позволете да ви покажа бележките си от пътя."],
+      [/ганьо|ганю|политик|избор/i,"/bay-ganyo",1,"Бай Ганьо, боя се, е по-жилав от мен самия. Елате, ще ви разкажа как го срещнах за пръв път."],
+      [/витош|черни връх|планин|турист/i,"/vitosha",1,"Витоша! В един августовски ден поведох софиянци към Черни връх. Да вървим — горе въздухът е по-честен."],
+      [/свищов|детств|одеса|учи|роден|габрово|николаев/i,"/early-life",1,"Роден съм край Дунава, в Свищов, а правото учих в далечна Одеса. Елате да ви покажа откъде тръгнах."],
+      [/смърт|убий|убит|радилово|умря|такев/i,"/assassination",3,"Разказаха ми как е свършил пътят ми край Радилово. Говоря за това спокойно — нека ви покажа какво се знае."]
+    ]
+  },
+  en: {
+    kicker:"An interactive library", title:"Aleko Konstantinov",
+    placeholder:"Ask Aleko…", send:"Ask", voiceOn:"Voice: on", voiceOff:"Voice: off",
+    dark:"Dark", light:"Light",
+    wait:"Aleko is thinking…", caption:"Aleko Konstantinov",
+    credit:"Portrait and facts: Wikipedia (CC BY-SA)",
+    hello:"Greetings, traveller! I am Aleko. Where does your curiosity lead — to Chicago, to the peaks of Vitosha, or to the pages of my satires?",
+    fallback:"A curious question! Let me show you the library — from there, roads lead everywhere.",
+    pages:{
+      "/library":{nav:"Library",h:"The Library",lead:"Writer, lawyer, public figure — and the man who named himself the Happy Man.",cards:true,
+        p:["Aleko Ivanitsov Konstantinov (1863–1897) was a Bulgarian writer, lawyer and public figure, and the founder of the organised tourist movement in Bulgaria. He is best known for his character Bay Ganyo. Choose a door: behind each is a chapter of his short life."]},
+      "/early-life":{nav:"Early life",h:"Svishtov, Gabrovo, Nikolaev, Odessa",lead:"A childhood by the Danube and school years in Russia.",
+        p:["Aleko was born in Svishtov on 1 January 1863, old style (13 January, new style), in the house of the prominent merchant Ivanitsa Hadzhikonstantinov. On his mother's side he came from the large Shishmanov family of Vidin.",
+           "He was taught by the private tutors Emanuil Vaskidovich and Yanko Mustakov, then at the Svishtov school (1872–1874) and the Aprilov High School in Gabrovo (1874–1877). During the Russo-Turkish War, aged just fourteen, he served as a clerk in the office of the governor of Svishtov, Marko Balabanov.",
+           "On 14 July 1877 the Russian emperor Alexander II stayed in his father's house and watched from its balcony as the troops crossed the bridge over the Danube. Young Aleko was there, and the memory stayed with him for life.",
+           "After the war he boarded at Todor Minkov's South Slavic school and finished high school in Nikolaev in 1881. There he discovered Russian and world literature, made his first attempts at writing, played the violin and even tried composing. That same year he began law at the Novorossiya University in Odessa, graduating in 1885."],
+        f:[["1863","Born in Svishtov"],["1874–1877","Aprilov High School, Gabrovo"],["1877","Governor's clerk; Alexander II in his home"],["1881","Finishes school in Nikolaev"],["1885","Graduates in law, Odessa"]]},
+      "/public-life":{nav:"Law & society",h:"Judge, lawyer, citizen",lead:"Dismissed twice — for refusing to bend.",
+        p:["Back in Bulgaria, Aleko served as a judge (1885–1886), prosecutor (1886) at the Sofia District Court and assistant prosecutor (1886–1888). He was dismissed for opposing political interference in the courts. He became a lawyer, then a judge again at the Sofia Court of Appeal (1890–1892) — and was dismissed again.",
+           "For the rest of his life he practised as an independent lawyer in Sofia; in 1896 he was also legal adviser to the city administration. That year he defended a habilitation thesis on the right of pardon under the new penal code, hoping to teach at the Law Faculty of Sofia University.",
+           "He took part in a great many civic causes: school trustee, member of the Supreme Macedonian Committee, of the board of the Slavyanska Beseda society, the Society for Popular Education, the Music Society, the Theatre Committee, the Society for the Encouragement of the Arts and the Commission for the Encouragement of Local Industry.",
+           "From his student days he admired Petko Karavelov and his ideas of parliamentary democracy. He contributed to the journal Biblioteka \u201cSveti Kliment\u201d, joined the Democratic Party, helped draft its programme and wrote for its newspaper Zname from its founding in 1894."],
+        f:[["1885–1888","Judge, prosecutor, assistant prosecutor"],["1890–1892","Judge at the Court of Appeal"],["1894","Writes for the newspaper Zname"],["1896","Thesis on the right of pardon"]]},
+      "/chicago":{nav:"Travels",h:"To Chicago and Back",lead:"Paris, Prague, Chicago — three exhibitions and one book.",
+        p:["Aleko visited the World Exhibition in Paris (1889), the Jubilee Industrial Exhibition in Prague (1891) and the Columbian Exposition in Chicago (1893), where he also saw Niagara Falls.",
+           "His friends urged him to set down his impressions as light, \u201cflying\u201d notes. So in 1893 the travelogue \u201cTo Chicago and Back\u201d was born; it appeared as a book in 1894. It was his first mature work and the first to bring him literary fame.",
+           "It is the first Bulgarian travelogue about a journey beyond the country's borders. Aleko looks at America with curiosity but also with measure: he admires its technology and prosperity and is indignant at what is inhumane in a rich, well-ordered society. He laughs at nearly everything, and is serious only before nature, machines and social troubles.",
+           "With this book the Bulgarian travelogue stopped being geographical description and became literature. It also stirred a lasting interest in Chicago, today home to the largest Bulgarian community in the United States."],
+        f:[["1889","Exhibition in Paris"],["1891","Exhibition in Prague"],["1893","Chicago and Niagara"],["1894","The book appears"]]},
+      "/bay-ganyo":{nav:"Bay Ganyo",h:"Bay Ganyo",lead:"Incredible tales of a contemporary Bulgarian.",
+        p:["In 1895 Aleko gathered his feuilletons about Bay Ganyo, a small travelling peddler of rose oil out to get rich through trade and politics. Behind the amusing adventures stand the great questions of the day: where Bulgaria is heading, and what is becoming of its manners and morals.",
+           "The book is a string of anecdotes told among a bohemian company of friends. Across Europe the hero stumbles into comic situations; he is stingy, arrogant and crude, yet he amuses more than he repels.",
+           "In the second part Bay Ganyo returns home and starts \u201cdoing\u201d politics. The laughter fades and gives way to anger and disappointment.",
+           "No character has been more debated by Bulgarian critics: is he a national type or a social one? His name has long lived outside the book, in jokes and as a byword. He is believed to be modelled on Ganyo Somov, a tradesman from Karlovo."],
+        f:[["1895","The Bay Ganyo feuilletons"],["Hero","A peddler of rose oil"],["Model","Ganyo Somov of Karlovo"]]},
+      "/works":{nav:"Works",h:"Feuilletons, travel pieces, translations",lead:"More than forty feuilletons and seven pen names.",
+        p:["His first publications were the poems \u201cMirror\u201d (1880) and \u201cWhy?\u201d (1881), printed in the newspapers Tselokupna Bulgaria and Svobodna Bulgaria. In Odessa he wrote the long poem \u201cSong of Slobod-Madzhar and Plamen-Tenya\u201d (1883).",
+           "By the end of his life he had written more than 40 feuilletons, most of them prompted by particular events. \u201cHerostratus II\u201d, for instance, answers Prince Ferdinand's attempt to close the Slavyanska Beseda reading room. His themes are trampled voting rights, ministers, deputies and the monarch. In \u201cPassion\u201d and \u201cHappy New Year\u201d he laughs at himself, and in the cycle \u201cVarious People, Various Ideals\u201d he draws lasting human types.",
+           "In travel pieces such as \u201cIncredible Indeed, but a Fact…\u201d, \u201cWhat? Switzerland?\u201d and \u201cIn Bulgarian Switzerland\u201d he celebrates Bulgarian nature. In 1894 he published the story \u201cGod Forbid the Blind Should See\u201d. One play survives, \u201cIn the Sphere of Tailcoats and Opera Hats\u201d, about Prince Ferdinand's arrival and the new court ceremonial.",
+           "He translated Pushkin (\u201cThe Fountain of Bakhchisarai\u201d, \u201cPoltava\u201d, \u201cThe Gypsies\u201d), Lermontov (\u201cThe Demon\u201d, \u201cThe Fugitive\u201d), Nekrasov, Moli\u00e8re (\u201cTartuffe\u201d), Copp\u00e9e and Sardou. His own works have been translated into about 30 languages.",
+           "He signed himself Shtastlivetsa (the Happy Man), Bashibozuk, Benyo Nakov, Evstati Hadzhibalkanski, One of the Moral Influence Club, the Great Warrior and Hanyo. Unfinished stories, drawings and letters are kept in the archive of Professor Petar Dinekov."],
+        f:[["1880","\u201cMirror\u201d — first publication"],["40+","feuilletons"],["≈30","languages he is translated into"],["7","pen names"]]},
+      "/vitosha":{nav:"Vitosha",h:"Cherni Vrah",lead:"The beginning of organised tourism in Bulgaria.",
+        p:["Aleko was famous for his love of nature and travel. On his initiative the first mass ascent of Cherni Vrah took place on 27 August 1895, the day from which organised tourism in Bulgaria is counted.",
+           "At the summit a Club of Bulgarian Tourists was founded. The first tourist society, set up in 1899 after his death, took his name.",
+           "Today a monument to the Happy Man stands on Cherni Vrah, and the Aleko area and tourist centre on Vitosha carry his name."],
+        f:[["1894","Outing to Cherni Vrah with friends"],["1895","First mass ascent, 27 August"],["1899","The Aleko Konstantinov tourist society"]]},
+      "/assassination":{nav:"Radilovo",h:"The night near Radilovo",lead:"11 May 1897 (23 May, new style), the feast of Cyril and Methodius.",
+        p:["Aleko was travelling with his party colleague Mihail Takev from Peshtera to Pazardzhik. Peshtera was Takev's birthplace and constituency, and the two had been there for the celebrations of Slavic letters. On the way they stopped in the village of Radilovo.",
+           "Peshtera and Radilovo had long quarrelled over forests and common pastures, more than once violently. A group of Radilovo men, led by the mayor Petar Minkov of the People's Party, decided to kill Takev.",
+           "The coach left Radilovo after ten at night. In the lands of neighbouring Kochagovo, Milosh Topalov and Petar Salepov fired from ambush and killed Aleko. It is told that the two friends had changed places shortly before.",
+           "Minkov, Salepov and Topalov were sentenced to death; Salepov, a minor, had his sentence commuted to 15 years in prison. In court they said the target was Takev, though some researchers hold that the ambush was aimed at both men. Aleko was 34. He is buried in the Central Sofia Cemetery, and Kochagovo is now called Aleko Konstantinovo."],
+        f:[["1897","Killed in an ambush"],["34","His age"],["Verdict","The three perpetrators sentenced to death"]]},
+      "/legacy":{nav:"Legacy",h:"Legacy",lead:"What the Happy Man left behind.",
+        p:["His birthplace in Svishtov has been a museum since 1979 and is among Bulgaria's 100 National Tourist Sites. Its furnishings are kept as they were when Alexander II stayed there.",
+           "A street in Sofia, Aleko Peak in Rila, a cape on Livingston Island in Antarctica, Aleko's Corner in the Ayazmoto park in Stara Zagora, the Aleko area on Vitosha and the village of Aleko Konstantinovo all carry his name.",
+           "His portrait is on the 100 leva banknote of 2003. In Chicago a bust of him stands in the University of Chicago's Regenstein Library, and in 2017 an intersection in the city was named in his honour.",
+           "In 2003 the first volume of Gavrail Panchev's three-volume biography of him was published."],
+        f:[["1979","House museum in Svishtov"],["2003","The 100 leva banknote"],["2017","Intersection in Chicago"]]}
+    },
+    demo:[
+      [/banknote|legacy|bust|remember|named after|monument|museum/i,"/legacy",3,"They tell me my face now sits upon a banknote — I, who seldom had money in my pocket! Come and see what remains of me."],
+      [/feuilleton|translat|pen name|pseudonym|poem|pushkin|works|happy man|lucky/i,"/works",5,"I have written under seven names, though the Happy Man suits me best. Come, I shall show you my feuilletons and translations."],
+      [/judge|lawyer|court|prosecut|dismiss|karavelov|party|law/i,"/public-life",1,"Twice they dismissed me from the bench — it seems justice and I were fonder of each other than some would have liked. Come, let me tell you."],
+      [/chicago|americ|niagara|fair|paris|prague|travel/i,"/chicago",1,"Ah, the New World! Chicago in 1893 was a revelation — machines, noise and scale such as we in the Balkans had never dreamed of. Allow me to show you my notes from the journey."],
+      [/ganyo|ganio|politic|election/i,"/bay-ganyo",1,"Bay Ganyo, I fear, has proven hardier than I. Come, I shall tell you how I first met him."],
+      [/vitosha|cherni|mountain|touris|hik/i,"/vitosha",1,"Vitosha! One August day I led the people of Sofia up to Cherni Vrah. Let us go — the air is more honest up there."],
+      [/svishtov|child|odessa|born|stud|school|gabrovo|nikolaev/i,"/early-life",1,"I was born by the Danube, in Svishtov, and studied law in distant Odessa. Come, let me show you where I set out from."],
+      [/death|die|kill|assassin|radilovo|murder|takev/i,"/assassination",3,"I have been told how my road ended near Radilovo. I speak of it calmly — let me show you what is known."]
+    ]
+  }
+};
+
+const BOTEV = {
+  bg: {
+    kicker:"Интерактивна библиотека", title:"Христо Ботев",
+    placeholder:"Попитайте Ботев…", send:"Питай", voiceOn:"Глас: вкл.", voiceOff:"Глас: изкл.",
+    dark:"Тъмно", light:"Светло",
+    wait:"Ботев размишлява…", caption:"Христо Ботев",
+    credit:"Портрет и сведения: Уикипедия (CC BY-SA)",
+    hello:"Здравей, брате! Аз съм Христо Ботев. За какво да ти разкажа — за Калофер, за стиховете ми или за парахода „Радецки“?",
+    fallback:"Добър въпрос! Ела в библиотеката — оттам ще намерим пътя.",
+    pages:{
+      "/library":{nav:"Библиотека",h:"Библиотеката",lead:"Поет, публицист, революционер — двадесет и осем години, които не се побират в един живот.",cards:true,
+        p:["Христо Ботев (1848–1876), роден Христо Ботьов Петков, е български поет, публицист и революционер, член на Българския революционен централен комитет. Изберете врата: зад всяка има по една глава от неговия кратък и буен живот."]},
+      "/early-life":{nav:"Ранни години",h:"Калофер и Одеса",lead:"Син на учител, непокорен ученик, ненаситен читател.",
+        p:["Ботев е роден на 25 декември 1847 г. по стар стил (6 януари 1848 г. по нов) в Калофер, тогава в Османската империя. Някои историци оспорват мястото и сочат Карлово или село Осен. Баща му Ботьо Петков е учител и виден възрожденец, майка му Иванка е от скромно калоферско семейство; Христо расте с осем братя и сестри.",
+           "През 1854 г. семейството се мести в Карлово, а през 1858 г. се връща в Калофер, където Христо учи в трикласното училище при баща си.",
+           "През есента на 1863 г., със стипендия от руското правителство и с помощта на Найден Геров, заминава за Одеса и пристига там на 14 ноември. Във Втора гимназия трудно понася строгата дисциплина, често отсъства и се кара със съученици и учители, но прекарва дълги часове в библиотеките. Чете най-вече руски автори, особено Чернишевски и Тургенев, и помага на филолога Виктор Григорович в превода на български народни песни.",
+           "През септември 1865 г. е изключен за „небрежност“ и губи стипендията си. Остава в Одеса, издържа се с частни уроци, записва се като волнослушател в Историко-филологическия факултет на Новорусийския университет и учителства в Бесарабия. Там пише първите си стихове и се сближава с руски и полски революционери."],
+        f:[["1848","Роден в Калофер"],["1863","Заминава за Одеса"],["1865","Изключен от гимназията"]]},
+      "/exile":{nav:"Емиграция",h:"Калофер, Румъния, Бесарабия",lead:"От учителската катедра до воденицата край Букурещ.",
+        p:["През 1867 г. Ботев се връща в Калофер и замества болния си баща като учител; въвежда предмети като география, история и гражданско право. На 15 април същата година в цариградското издание „Гайда“, редактирано от Петко Славейков, излиза без подпис първото му стихотворение — „Майце си“.",
+           "На 11 май, на празника на Кирил и Методий, държи неочаквана реч срещу умереността на националното движение, което тогава се бори главно за независима църква. Полицията заплашва, но нищо не последва.",
+           "Баща му го изпраща отново в Одеса, но Ботев, без да каже на родителите си, заминава за Румъния и в края на септември 1867 г. пристига в Гюргево. Там бързо намира българските емигранти, сред които Хаджи Димитър. През октомври присъства в Букурещ на погребението на Георги Раковски, а после спира в Браила, където започва работа и печата втората си елегия — „Към брата си“.",
+           "Известно време живее в изоставена воденица край Букурещ заедно с Васил Левски и двамата стават близки приятели. От 1869 до 1871 г. отново е учител в Бесарабия, без да прекъсва връзките си с революционното движение."],
+        f:[["1867","„Майце си“ — първа публикация"],["1867","Пристига в Гюргево"],["1869–1871","Учител в Бесарабия"]]},
+      "/journalism":{nav:"Перо и комитет",h:"Вестници и комитет",lead:"Словото като оръжие.",
+        p:["През юни 1871 г. Ботев става редактор на емигрантския вестник „Дума на българските емигранти“, където печата ранните си стихове. Заради връзките си с руски революционери прекарва месеци в затвора. После работи във вестник „Свобода“ на Любен Каравелов, а през 1873 г. редактира сатиричния „Будилник“, чиито фейлетони жилят заможните българи, останали настрана от революционното дело.",
+           "В края на 1872 г. османските власти залавят Левски и през февруари 1873 г. го обесват — тежък удар за движението. Българският революционен централен комитет се разделя: Ботев, Стефан Стамболов и Панайот Хитов искат незабавно въстание, а умерените около Каравелов смятат, че е рано. Въстанието в Босна и Херцеговина през 1875 г. засилва убеждението на Ботев, че часът е дошъл.",
+           "В началото на август 1875 г. болният Каравелов се оттегля и Ботев е избран за председател на комитета. Същата година се жени за Венета; ражда им се дъщеря Иванка.",
+           "По убеждения Ботев е утопичен социалист, повлиян от Херцен, Бакунин, Чернишевски и Парижката комуна; чете и Маркс и Енгелс в руски превод. Заедно с Каравелов е сред най-острите противници на самодържавието. В статия от 1875 г. допуска и турци да участват в революцията редом с българите — защото и едните, и другите страдат от реда на „султаните и капиталистите“."],
+        f:[["1871","„Дума на българските емигранти“"],["1873","Сатиричният „Будилник“"],["1875","Председател на БРЦК"]]},
+      "/poetry":{nav:"Поезия",h:"Песни и стихотворения",lead:"Двадесет стихотворения, които стигат за безсмъртие.",
+        p:["През 1875 г. Ботев издава единствената си стихосбирка — „Песни и стихотворения от Ботьова и Стамболова“, заедно със своя съратник Стефан Стамболов, бъдещия държавник. Тя се смята за едно от най-големите постижения на българската литература.",
+           "Стиховете му говорят с гласа на бедните и непокорните, които се борят за свобода срещу тиранията. Сред тях са „Моята молитва“, „На прощаване“, „Хайдути“, „В механата“ и „Борба“, баладата „Хаджи Димитър“, посветена на загиналия му приятел, и „Обесването на Васил Левски“. В „Елегия“ (1870) пита народа кой го люлее в люлката на робството.",
+           "В поезията му звучат Байрон, Пушкин и Лермонтов, но и българската народна песен, и стиховете на Раковски. Ботев не щади и събратята си по перо: в едно стихотворение напада Петко Славейков и Иван Вазов за начина, по който гледат на литературата и живота.",
+           "В последните си години оставя поезията заради делото. Всичките двадесет стихотворения от книгата са преведени на английски от Томас Бътлър, Питър Темпест и Кристофър Бъкстон."],
+        f:[["1870","„Елегия“"],["1875","Единствената стихосбирка"],["20","стихотворения"]]},
+      "/radetzky":{nav:"Радецки",h:"„Радецки“ и Врачанският балкан",lead:"Май 1876 г. — от Дунава до Околчица.",
+        p:["През Априлското въстание от 1876 г. опитният войвода, поканен да поведе чета от Румъния, отказва и Ботев сам поема командването. Военен ръководител е Никола Войновски. Преди да премине Дунава, Ботев пише, че е весел и радостта му няма граници, защото „Моята молитва“ ще се сбъдне.",
+           "Планът е дързък: преоблечени като градинари, четниците се качват на групи на австро-унгарския пътнически параход „Радецки“ от румънските пристанища Зимнич, Турну Мъгуреле, Корабия и Бекет. Щом се качва последната група, те изваждат скритото оръжие и завладяват кораба. Случката по-късно е възпята в песента „Тих бял Дунав се вълнува“.",
+           "На българска земя четата почти веднага е нападната от башибозук. На 18 май тя заема позиция на Милин камък, на около 50 км от Дунава. Става ясно, че подкрепа от местното население няма да дойде.",
+           "Сутринта на 20 май (1 юни по нов стил) настъпват башибозуци и пет роти редовна османска войска. Отбраната е разделена на два участъка, командвани от Войновски и от Ботев. Вечерта Ботев е застрелян във Врачанския балкан, на 28 години. Не е сигурно дали е паднал на Околчица или на Вола; правителствена комисия през 1901 г. приема Околчица. След смъртта му четата се разпада."],
+        f:[["Май 1876","Параходът „Радецки“"],["18 май","Милин камък"],["20 май","Гибелта на Ботев, на 28 години"]]},
+      "/legacy":{nav:"Памет",h:"Памет",lead:"Как един поет става икона — и за какво се спори.",
+        p:["През 1885 г. е създаден комитет за честване на годишнината от гибелта му, а през 1890 г. на главния площад във Враца, в присъствието на княз Фердинанд, е открит негов паметник. Стефан Стамболов и първият му биограф Захари Стоянов допринасят много за Ботевия образ; за едно десетилетие той става централна фигура в националния пантеон.",
+           "Не всички приемат култа безкритично. Още през 1891 г. Иван Вазов се тревожи, че той се гради върху горещо патриотично чувство, а не върху трезва оценка. През ХХ век Ботев е присвояван от различни страни — социалисти, комунисти, анархисти — и всяка вижда в него свой предтеча. Историците го описват и като пламенен патриот, и като социален революционер, и като човек с рязък, неудобен нрав.",
+           "Името му носят град Ботевград (от 1934 г.), връх Ботев — най-високият в Стара планина (от 1950 г.), футболни отбори, училища и улици. Родната му къща в Калофер, разрушена през войната от 1877–1878 г., е възстановена през 40-те години като Национален музей „Христо Ботев“. На Околчица има паметник от 1939 г.",
+           "Стиховете му се учат в училище и се рецитират на празници. На 2 юни се почита паметта на Ботев и неговите четници, а в класацията „Великите българи“ на БНТ (2006–2007) той е на пето място."],
+        f:[["1890","Паметник във Враца"],["1934","Ботевград"],["1950","Връх Ботев"],["2 юни","Ден на Ботев"]]}
+    },
+    demo:[
+      [/памет|ботевград|връх|наслед|музей|2 юни|помн/i,"/legacy",3,"Казват ми, че на мое име имало връх и цял град. Аз исках само едно — свобода за народа. Ела да видиш какво е останало."],
+      [/радецки|чета|околчица|смърт|загин|убит|умря|врац|дунав|въстани/i,"/radetzky",2,"Преоблякохме се като градинари и взехме парахода насред Дунава. Разказаха ми как е свършил пътят ми в Балкана — ела, ще ти покажа."],
+      [/стих|поези|песн|хаджи димитър|молитва|балада|поет/i,"/poetry",1,"Написал съм малко стихове, но във всеки съм сложил сърцето си. Ела да ги разгърнем заедно."],
+      [/вестник|будилник|свобода|комитет|каравелов|социал|венета|брцк|жена/i,"/journalism",1,"Перото ми беше оръжие не по-малко от пушката. Ела да ти разкажа за вестниците и за комитета."],
+      [/румъни|левски|воденица|браила|гюргево|емигра|бесараби|раковски/i,"/exile",4,"С Левски делихме една изоставена воденица край Букурещ — гладни, премръзнали, но весели. Ела да ти разкажа за хъшовските години."],
+      [/калофер|детств|одеса|роден|учи|баща|майка/i,"/early-life",1,"Роден съм в Калофер, син на учител, а в Одеса повече четях в библиотеките, отколкото седях в клас. Ела да видиш откъде тръгнах."]
+    ]
+  },
+  en: {
+    kicker:"An interactive library", title:"Hristo Botev",
+    placeholder:"Ask Botev…", send:"Ask", voiceOn:"Voice: on", voiceOff:"Voice: off",
+    dark:"Dark", light:"Light",
+    wait:"Botev is thinking…", caption:"Hristo Botev",
+    credit:"Portrait and facts: Wikipedia (CC BY-SA)",
+    hello:"Greetings, brother! I am Hristo Botev. What shall I tell you of — Kalofer, my poems, or the steamer Radetzky?",
+    fallback:"A good question! Come to the library — we shall find the way from there.",
+    pages:{
+      "/library":{nav:"Library",h:"The Library",lead:"Poet, journalist, revolutionary — twenty-eight years that do not fit in one life.",cards:true,
+        p:["Hristo Botev (1848–1876), born Hristo Botyov Petkov, was a Bulgarian poet, journalist and revolutionary, and a member of the Bulgarian Revolutionary Central Committee. Choose a door: behind each is a chapter of his short and stormy life."]},
+      "/early-life":{nav:"Early life",h:"Kalofer and Odessa",lead:"A teacher's son, an unruly pupil, an insatiable reader.",
+        p:["Botev was born on 25 December 1847, old style (6 January 1848, new style), in Kalofer, then in the Ottoman Empire. Some historians dispute the place and point to Karlovo or the village of Osen. His father, Botyo Petkov, was a teacher and a notable figure of the National Revival; his mother Ivanka came from a modest Kalofer family. Hristo grew up with eight brothers and sisters.",
+           "In 1854 the family moved to Karlovo, and in 1858 it returned to Kalofer, where Hristo attended the three-class school with his father as his teacher.",
+           "In the autumn of 1863, with a scholarship from the Russian government and the help of Nayden Gerov, he left for Odessa, arriving on 14 November. At the Second Grammar School he chafed at the strict discipline, was often absent and quarrelled with classmates and teachers, yet spent long hours in libraries. He read mostly Russian authors, above all Chernyshevsky and Turgenev, and helped the philologist Victor Grigorovich translate Bulgarian folk songs.",
+           "In September 1865 he was expelled for “carelessness” and lost his scholarship. He stayed on in Odessa, lived by private tutoring, enrolled as an auditor at the Historical and Philological Faculty of the Novorossiya University and taught in Bessarabia. There he wrote his first poems and grew close to Russian and Polish revolutionaries."],
+        f:[["1848","Born in Kalofer"],["1863","Leaves for Odessa"],["1865","Expelled from school"]]},
+      "/exile":{nav:"Exile",h:"Kalofer, Romania, Bessarabia",lead:"From the teacher's desk to the mill near Bucharest.",
+        p:["In 1867 Botev returned to Kalofer and replaced his ill father as teacher, introducing subjects such as geography, history and civil law. On 15 April that year his first poem, “To My Mother”, appeared unsigned in Gaida, published in Constantinople and edited by Petko Slaveykov.",
+           "On 11 May, the feast of Cyril and Methodius, he gave an impromptu speech attacking the moderation of the national movement, which was then focused mainly on an independent church. The police made threats, but nothing came of them.",
+           "His father sent him back to Odessa, but Botev, without telling his parents, went to Romania instead and reached Giurgiu at the end of September 1867. There he quickly found the Bulgarian émigrés, among them Hadzhi Dimitar. In October he attended the burial of Georgi Rakovski in Bucharest, then stopped in Brăila, where he found work and published his second elegy, “To My Brother”.",
+           "For a time he lived in an abandoned mill near Bucharest together with Vasil Levski, and the two became close friends. From 1869 to 1871 he taught again in Bessarabia, keeping his ties with the revolutionary movement."],
+        f:[["1867","“To My Mother” — first publication"],["1867","Arrives in Giurgiu"],["1869–1871","Teacher in Bessarabia"]]},
+      "/journalism":{nav:"Pen & committee",h:"Newspapers and the committee",lead:"The word as a weapon.",
+        p:["In June 1871 Botev became editor of the émigré newspaper Word of the Bulgarian Emigrants, where he printed his early poems. His ties with Russian revolutionaries cost him months in prison. He then worked on Lyuben Karavelov's newspaper Svoboda (Liberty), and in 1873 edited the satirical Budilnik (Alarm Clock), whose feuilletons stung the wealthy Bulgarians who stood aside from the revolutionary cause.",
+           "At the end of 1872 the Ottoman authorities captured Levski, and in February 1873 he was hanged — a heavy blow to the movement. The Bulgarian Revolutionary Central Committee split: Botev, Stefan Stambolov and Panayot Hitov wanted an immediate uprising, while the moderates around Karavelov thought it too early. The 1875 revolt in Bosnia and Herzegovina strengthened Botev's belief that the hour had come.",
+           "At the beginning of August 1875 the ailing Karavelov stepped down and Botev was elected president of the committee. That same year he married Veneta; they had a daughter, Ivanka.",
+           "In his convictions Botev was a utopian socialist, shaped by Herzen, Bakunin, Chernyshevsky and the Paris Commune; he also read Marx and Engels in Russian translation. With Karavelov he was among the fiercest opponents of autocracy. In an 1875 article he allowed that Turks, too, could join the revolution beside the Bulgarians, since both suffered under the order of “sultans and capitalists”."],
+        f:[["1871","Word of the Bulgarian Emigrants"],["1873","The satirical Budilnik"],["1875","President of the BRCC"]]},
+      "/poetry":{nav:"Poetry",h:"Songs and Poems",lead:"Twenty poems, and enough for immortality.",
+        p:["In 1875 Botev published his one and only book of verse, “Songs and Poems by Botev and Stambolov”, together with his comrade Stefan Stambolov, the future statesman. It is regarded as one of the greatest achievements of Bulgarian literature.",
+           "His poems speak in the voice of the poor and the defiant, fighting for freedom against tyranny. Among them are “My Prayer”, “At Farewell”, “Hajduks”, “In the Tavern” and “Struggle”, the ballad “Hadzhi Dimitar”, dedicated to his fallen friend, and “The Hanging of Vasil Levski”. In “Elegy” (1870) he asks his people who rocks them in the cradle of slavery.",
+           "Byron, Pushkin and Lermontov echo in his verse, and so do Bulgarian folk song and the poetry of Rakovski. Botev did not spare his fellow writers either: in one poem he attacks Petko Slaveykov and Ivan Vazov for their approach to literature and life.",
+           "In his last years he gave up poetry for the cause. All twenty poems of the book have been translated into English by Thomas Butler, Peter Tempest and Christopher Buxton."],
+        f:[["1870","“Elegy”"],["1875","His only book of verse"],["20","poems"]]},
+      "/radetzky":{nav:"Radetzky",h:"The Radetzky and the Vratsa mountains",lead:"May 1876 — from the Danube to Okolchitsa.",
+        p:["During the April Uprising of 1876 the experienced commander invited to lead a company from Romania refused, and Botev took command himself. Military expertise came from Nikola Voinovski. Before crossing the Danube, Botev wrote that he was in high spirits and his joy was boundless, because “My Prayer” was about to be fulfilled.",
+           "The plan was bold: disguised as gardeners, the rebels boarded the Austro-Hungarian passenger steamer Radetzky in groups at the Romanian ports of Zimnicea, Turnu Măgurele, Corabia and Bechet. When the last group was aboard they drew their hidden weapons and seized the ship. The episode was later celebrated in the song “Still White Danube Undulates”.",
+           "Once ashore, the company came under bashi-bazouk attack almost at once. On 18 May it took up position on Milin Kamak hill, some 50 km from the Danube. It became clear that no help would come from the local population.",
+           "On the morning of 20 May (1 June, new style) bashi-bazouks and five companies of regular Ottoman troops advanced. The defence was split into two sectors, commanded by Voinovski and by Botev. That evening Botev was shot dead in the mountains near Vratsa, aged 28. It is not certain whether he fell at Okolchitsa or at Vola; a government commission in 1901 concluded it was Okolchitsa. After his death the company broke up."],
+        f:[["May 1876","The steamer Radetzky"],["18 May","Milin Kamak"],["20 May","Botev killed, aged 28"]]},
+      "/legacy":{nav:"Legacy",h:"Legacy",lead:"How a poet became an icon — and what is still argued over.",
+        p:["In 1885 a committee was founded to commemorate the anniversary of his death, and in 1890 a monument to him was unveiled on the main square of Vratsa in the presence of Prince Ferdinand. Stefan Stambolov and his first biographer, Zahari Stoyanov, did much to shape his image; within a decade he was a central figure in the national pantheon.",
+           "Not everyone accepted the cult uncritically. As early as 1891 Ivan Vazov worried that it rested on hot patriotic feeling and not on a sober estimate of his merits. In the twentieth century Botev was claimed from several sides — socialists, communists, anarchists — each seeing in him a forerunner. Historians describe him as an ardent patriot, a social revolutionary, and a man of harsh and difficult temper.",
+           "The town of Botevgrad (since 1934), Botev Peak, the highest in the Balkan Mountains (since 1950), football clubs, schools and streets bear his name. His childhood home in Kalofer, destroyed in the war of 1877–1878, was rebuilt in the 1940s as the Hristo Botev National Museum. A monument has stood at Okolchitsa since 1939.",
+           "His poems are taught in school and recited on anniversaries. On 2 June Botev and the men of his company are commemorated, and in Bulgarian National Television's “The Great Bulgarians” (2006–2007) he was ranked fifth."],
+        f:[["1890","Monument in Vratsa"],["1934","Botevgrad"],["1950","Botev Peak"],["2 June","Botev's Day"]]}
+    },
+    demo:[
+      [/legacy|remember|monument|botevgrad|peak|museum|2 june|named/i,"/legacy",3,"They tell me a peak and a whole town carry my name. I wanted one thing only — freedom for my people. Come and see what remains."],
+      [/radetzky|steamer|ship|company|okolchitsa|death|die|kill|vratsa|danube|uprising/i,"/radetzky",2,"We dressed as gardeners and took the steamer in the middle of the Danube. I have been told how my road ended in the mountains — come, I will show you."],
+      [/poem|poetry|verse|song|ballad|prayer|hadzhi dimitar|poet/i,"/poetry",1,"I wrote few poems, but I put my heart into every one. Come, let us open them together."],
+      [/newspaper|budilnik|svoboda|committee|karavelov|socialis|veneta|wife|journal/i,"/journalism",1,"My pen was a weapon no less than a rifle. Come, let me tell you of the newspapers and the committee."],
+      [/romania|levski|mill|braila|giurgiu|exile|emigr|bessarabia|rakovski/i,"/exile",4,"Levski and I shared an abandoned mill near Bucharest — hungry, frozen, and cheerful. Come, let me tell you of those exile years."],
+      [/kalofer|child|odessa|born|school|stud|father|mother/i,"/early-life",1,"I was born in Kalofer, a teacher's son, and in Odessa I read in the libraries more than I sat in class. Come and see where I set out from."]
+    ]
+  }
+};
+
+const LEVSKI = {
+  bg: {
+    kicker:"Интерактивна библиотека", title:"Васил Левски",
+    placeholder:"Попитайте Левски…", send:"Питай", voiceOn:"Глас: вкл.", voiceOff:"Глас: изкл.",
+    dark:"Тъмно", light:"Светло",
+    wait:"Левски размишлява…", caption:"Васил Левски",
+    credit:"Портрет и сведения: Уикипедия (CC BY-SA)",
+    hello:"Здравей, брате! Аз съм Васил Левски. За какво да ти разкажа — за комитетите, за легията или за това каква България искам?",
+    fallback:"Добър въпрос, брате. Ела в библиотеката — оттам ще намерим пътя.",
+    pages:{
+      "/library":{nav:"Библиотека",h:"Библиотеката",lead:"Дякон, знаменосец, организатор — Апостолът на свободата.",cards:true,
+        p:["Васил Левски (1837–1873), роден Васил Иванов Кунчев, е български революционер, създател на Вътрешната революционна организация — мрежа от тайни комитети, която подготвя народа за въстание срещу османската власт. Изберете врата: зад всяка има по една глава от неговия живот."]},
+      "/early-life":{nav:"Ранни години",h:"Карлово и расото",lead:"Шивашки чирак, ученик, дякон Игнатий.",
+        p:["Левски е роден на 18 юли 1837 г. в Карлово, тогава в Османската империя. Родителите му Иван Кунчев и Гина Кунчева, по баща Караиванова, са от семейства на духовници и занаятчии. Има по-голяма сестра Яна, по-малки братя Христо и Петър и сестра Мария, която умира като дете. Баща му умира през 1844 г.",
+           "Учи в Карлово и чиракува за шивач. През 1855 г. вуйчо му, архимандрит Василий, го отвежда в Стара Загора, за да продължи учението си; след това минава и курс за подготовка на духовници.",
+           "На 7 декември 1858 г. става монах в Сопотския манастир под името Игнатий, а през 1859 г. е ръкоположен за йеродякон. Официално се отказва от духовния сан на Великден 1864 г."],
+        f:[["1837","Роден в Карлово"],["1858","Монах под името Игнатий"],["1864","Оставя духовния сан"]]},
+      "/legions":{nav:"Легиите",h:"Легиите и четата",lead:"Как Васил Кунчев става Левски.",
+        p:["През пролетта на 1862 г., вдъхновен от Георги Раковски, оставя манастира и заминава за Белград, където постъпва доброволец в Първата българска легия. За храбростта си в сраженията за Белград получава прозвището Левски. На 12 септември 1862 г. легията е разпусната под османски натиск.",
+           "През ноември 1866 г. посещава Раковски в Яш и е избран за знаменосец в четата на Панайот Хитов. През април 1867 г. четата минава Дунава при Тутракан, прекосява Лудогорието и стига Стара планина; през август, след сражения, се изтегля в Сърбия през Пирот.",
+           "В Белград Левски е сред видните участници във Втората българска легия. От февруари до април 1868 г. боледува тежко от стомашно заболяване и е опериран. Легията е разпусната по политически причини, а той за кратко е арестуван в Зайчар. През зимата на 1868 г. живее в изоставена мелница край Букурещ заедно с поета Христо Ботев."],
+        f:[["1862","Първа българска легия"],["1867","Знаменосец на Панайот Хитов"],["1868","Втора българска легия"]]},
+      "/organisation":{nav:"Комитетите",h:"Комитетите",lead:"Тайна мрежа от Дунава до Тракия.",
+        p:["От 11 декември 1868 до 24 февруари 1869 г. Левски прави първата си обиколка из българските земи: Пловдив, Перущица, Карлово, Сопот, Казанлък, Сливен, Търново, Ловеч, Плевен, Никопол. От 1 май до 26 август 1869 г. обикаля втори път, носи прокламации от Иван Касабов и основава тайни комитети.",
+           "От края на август 1869 до май 1870 г. е в Букурещ, свързва се с Любен Каравелов и е сред основателите на Българския революционен централен комитет и авторите на устава му.",
+           "От пролетта на 1870 г. около година и половина изгражда Вътрешната революционна организация с център Ловеч. Мрежата е най-гъста в Централна България — Софийско, Пловдивско, Старозагорско — и стига до Македония, Добруджа и Странджа. В началото на 70-те години в нея членуват малко над хиляда души, главно интелигенти и търговци.",
+           "През есента на 1871 г. заедно с Ангел Кънчев издава „Нареда на работниците за освобождението на българския народ“. На общото събрание в Букурещ от 29 април до 4 май 1872 г. Каравелов е избран за председател, а Левски е упълномощен да представлява комитета в българските земи."],
+        f:[["1868–1869","Две обиколки из страната"],["1870","Вътрешната революционна организация"],["1872","Общото събрание в Букурещ"]]},
+      "/ideas":{nav:"Идеи",h:"Идеи",lead:"Свобода за всички, които живеят в тази земя.",
+        p:["Левски си представя бъдеща България като демократична република, вдъхновена от идеите на Френската революция и от съвременното му западно общество.",
+           "Настоява за равенство между народности и вери: всички, които живеят в страната, ще бъдат равноправни с българина във всичко. Борбата според него е срещу османската власт, а не срещу турския народ.",
+           "Вярва в личната саможертва. Негови са думите, че ако спечели, печели за целия народ, а ако загуби — губи само себе си."],
+        f:[["Държава","Демократична република"],["Права","Равенство за всички народности и вери"],["Противник","Властта, а не народът"]]},
+      "/capture":{nav:"Къкрина",h:"Къкрина и София",lead:"От Арабаконак до бесилото.",
+        p:["На 22 септември 1872 г. помощникът му Димитър Общи, без одобрение, обира османската поща в прохода Арабаконак и взема 125 000 гроша за организацията. Общи и хората му скоро са арестувани, а показанията им разкриват мащаба на организацията и нейните водачи.",
+           "На 27 декември 1872 г. Левски е заловен в ханче в село Къкрина, докато прибира документи на организацията. На 4 януари 1873 г. е изпратен в София, за да бъде съден.",
+           "Пред съда признава кой е, но не издава съратниците си, нито нещо за организацията, и поема цялата вина върху себе си.",
+           "На 18 февруари 1873 г. е обесен в София; заради преминаването към новия календар годишнината се отбелязва на 19 февруари. На мястото днес се издига паметникът на Васил Левски. Къде е гробът му, не е сигурно: предполага се, че е в църквата „Света Петка Самарджийска“, но това не може да бъде доказано. Част от косата му се пази в Националния военноисторически музей."],
+        f:[["22 септември 1872","Обирът в Арабаконак"],["27 декември 1872","Заловен в Къкрина"],["18 февруари 1873","Обесен в София"]]},
+      "/legacy":{nav:"Памет",h:"Памет",lead:"Най-почитаният българин.",
+        p:["В национална телевизионна анкета през 2007 г. Левски е определен за най-великия българин на всички времена. Образът му е върху банкнотата от 1000 лева, в обращение от 1994 до 1999 г.",
+           "Името му носят град Левски и шест села, Националният стадион, Националната спортна академия, Националният военен университет и спортният клуб „Левски“ в София. От 17 февруари 2025 г. и летище София носи неговото име.",
+           "Паметници на Апостола има в София, в Белград и Димитровград в Сърбия, в Букурещ, Париж, Вашингтон, Буенос Айрес и в Паркани в Приднестровието. Музеи пазят паметта му в Карлово, Ловеч и Къкрина, а в Антарктика на негово име са Левски рид и връх Левски на остров Ливингстън.",
+           "За него пишат Христо Ботев („Обесването на Васил Левски“), Иван Вазов, Христо Смирненски и Николай Хайтов."],
+        f:[["2007","Най-великият българин в анкета"],["Музеи","Карлово, Ловеч, Къкрина"],["2025","Летище София „Васил Левски“"]]}
+    },
+    demo:[
+      [/памет|стадион|банкнот|летище|наречен|музей|велик/i,"/legacy",2,"Казват ми, че на мое име имало стадион и цял град. Не съм търсил слава — исках народът да е свободен. Ела да видиш."],
+      [/къкрина|залов|обес|съд|смърт|арабаконак|общи|гроб|бесил|умря/i,"/capture",2,"Разказаха ми как е свършил пътят ми — в Къкрина, а после в София. Пред съда не издадох никого. Ела, ще ти покажа."],
+      [/републик|иде|равен|турц|свобод|вяра|вери|народност/i,"/ideas",1,"Искам демократична република, в която всички народности и вери са равни пред закона. Ела да ти разкажа за какво се боря."],
+      [/комитет|организаци|ловеч|обиколк|каравелов|брцк|устав|нареда/i,"/organisation",3,"Обходих страната град по град и село по село, за да вържа комитетите в една мрежа. Ела да ти покажа как стана."],
+      [/легия|раковски|белград|хитов|знаменос|чета|ботев|мелница|прозвище|лъв/i,"/legions",1,"В Белград, в легията на Раковски, ме нарекоха Левски. Ела да ти разкажа за онези години."],
+      [/карлово|детств|монах|дякон|манастир|роден|игнатий|майка|баща|учи/i,"/early-life",1,"Роден съм в Карлово и преди да стана бунтовник, бях дякон Игнатий. Ела да видиш откъде тръгнах."]
+    ]
+  },
+  en: {
+    kicker:"An interactive library", title:"Vasil Levski",
+    placeholder:"Ask Levski…", send:"Ask", voiceOn:"Voice: on", voiceOff:"Voice: off",
+    dark:"Dark", light:"Light",
+    wait:"Levski is thinking…", caption:"Vasil Levski",
+    credit:"Portrait and facts: Wikipedia (CC BY-SA)",
+    hello:"Greetings, brother! I am Vasil Levski. What shall I tell you of — the committees, the legion, or the Bulgaria I want to see?",
+    fallback:"A good question, brother. Come to the library — we shall find the way from there.",
+    pages:{
+      "/library":{nav:"Library",h:"The Library",lead:"Deacon, standard-bearer, organiser — the Apostle of Freedom.",cards:true,
+        p:["Vasil Levski (1837–1873), born Vasil Ivanov Kunchev, was a Bulgarian revolutionary and the founder of the Internal Revolutionary Organisation, a network of secret committees preparing the people for an uprising against Ottoman rule. Choose a door: behind each is a chapter of his life."]},
+      "/early-life":{nav:"Early life",h:"Karlovo and the cassock",lead:"Tailor's apprentice, pupil, Deacon Ignatius.",
+        p:["Levski was born on 18 July 1837 in Karlovo, then in the Ottoman Empire. His parents, Ivan Kunchev and Gina Kuncheva, née Karaivanova, came from families of clergy and craftsmen. He had an older sister, Yana, younger brothers Hristo and Petar, and a sister, Maria, who died in childhood. His father died in 1844.",
+           "He went to school in Karlovo and was apprenticed as a tailor. In 1855 his uncle, the archimandrite Basil, took him to Stara Zagora to continue his schooling; afterwards he also took a clerical training course.",
+           "On 7 December 1858 he became a monk at the Sopot monastery under the name Ignatius, and in 1859 he was made a hierodeacon. He formally gave up his religious office at Easter 1864."],
+        f:[["1837","Born in Karlovo"],["1858","Becomes the monk Ignatius"],["1864","Leaves religious office"]]},
+      "/legions":{nav:"Legions",h:"The legions and the band",lead:"How Vasil Kunchev became Levski.",
+        p:["In the spring of 1862, inspired by Georgi Rakovski, he left the monastery for Belgrade and enlisted as a volunteer in the First Bulgarian Legion. For his courage in the fighting for Belgrade he earned the nickname Levski, “lionlike”. On 12 September 1862 the legion was disbanded under Ottoman pressure.",
+           "In November 1866 he visited Rakovski in Iaşi and was chosen as standard-bearer of Panayot Hitov's band. In April 1867 the band crossed the Danube at Tutrakan, moved through Ludogorie and reached the Balkan Mountains; in August, after skirmishes, it withdrew to Serbia through Pirot.",
+           "In Belgrade Levski was a prominent member of the Second Bulgarian Legion. From February to April 1868 he was gravely ill with a gastric condition and underwent surgery. The legion was disbanded under political pressure, and he was briefly arrested in Zaječar. In the winter of 1868 he lived in an abandoned mill near Bucharest together with the poet Hristo Botev."],
+        f:[["1862","First Bulgarian Legion"],["1867","Standard-bearer for Panayot Hitov"],["1868","Second Bulgarian Legion"]]},
+      "/organisation":{nav:"Committees",h:"The committees",lead:"A secret network from the Danube to Thrace.",
+        p:["From 11 December 1868 to 24 February 1869 Levski made his first tour of the Bulgarian lands: Plovdiv, Perushtitsa, Karlovo, Sopot, Kazanlak, Sliven, Tarnovo, Lovech, Pleven, Nikopol. From 1 May to 26 August 1869 he toured again, carrying proclamations from Ivan Kasabov and founding secret committees.",
+           "From late August 1869 to May 1870 he was in Bucharest, where he made contact with Lyuben Karavelov and was among the founders of the Bulgarian Revolutionary Central Committee and the drafters of its statute.",
+           "From the spring of 1870 he spent about a year and a half building the Internal Revolutionary Organisation, centred on Lovech. The network was densest in central Bulgaria — the Sofia, Plovdiv and Stara Zagora regions — and reached Macedonia, Dobruja and Strandzha. In the early 1870s it had just over a thousand members, mostly intellectuals and traders.",
+           "In the autumn of 1871, with Angel Kanchev, he issued the “Instruction of the Workers for the Liberation of the Bulgarian People”. At the general assembly in Bucharest from 29 April to 4 May 1872 Karavelov was elected leader, and Levski was authorised to represent the committee in the Bulgarian lands."],
+        f:[["1868–1869","Two tours of the country"],["1870","The Internal Revolutionary Organisation"],["1872","General assembly in Bucharest"]]},
+      "/ideas":{nav:"Ideas",h:"Ideas",lead:"Freedom for everyone who lives in this land.",
+        p:["Levski imagined the future Bulgaria as a democratic republic, inspired by the ideas of the French Revolution and by the Western society of his day.",
+           "He insisted on equality between ethnic groups and faiths: all who lived in the country would be equal in rights to the Bulgarian in everything. The struggle, as he saw it, was against the Ottoman government, not against the Turkish people.",
+           "He believed in personal sacrifice. His are the words that if he won, he would win for the entire people, and if he lost, he would lose only himself."],
+        f:[["State","A democratic republic"],["Rights","Equality for all peoples and faiths"],["Opponent","The government, not the people"]]},
+      "/capture":{nav:"Kakrina",h:"Kakrina and Sofia",lead:"From Arabakonak to the gallows.",
+        p:["On 22 September 1872 his assistant Dimitar Obshti, acting without approval, robbed an Ottoman postal convoy in the Arabakonak pass and took 125,000 groschen for the organisation. Obshti and his men were soon arrested, and their confessions revealed the size of the organisation and its leaders.",
+           "On 27 December 1872 Levski was arrested at an inn in the village of Kakrina while retrieving the organisation's documents. On 4 January 1873 he was sent to Sofia for trial.",
+           "Before the court he acknowledged who he was, but he did not reveal his comrades or anything about the organisation, and took the full blame on himself.",
+           "On 18 February 1873 he was hanged in Sofia; because of the change of calendar the anniversary is marked on 19 February. The Monument to Vasil Levski now stands on the spot. Where his grave lies is uncertain: the Church of St Petka of the Saddlers has been proposed, but this cannot be verified. Some of his hair is kept in the National Museum of Military History."],
+        f:[["22 Sept 1872","The Arabakonak robbery"],["27 Dec 1872","Arrested in Kakrina"],["18 Feb 1873","Hanged in Sofia"]]},
+      "/legacy":{nav:"Legacy",h:"Legacy",lead:"The most revered Bulgarian.",
+        p:["In a nationwide television poll in 2007 Levski was named the greatest Bulgarian of all time. His portrait was on the 1000 leva banknote in circulation from 1994 to 1999.",
+           "The town of Levski and six villages, the National Stadium, the National Sports Academy, the National Military University and the Levski Sofia sports club bear his name. Since 17 February 2025 so does Sofia Airport.",
+           "There are monuments to the Apostle in Sofia, in Belgrade and Dimitrovgrad in Serbia, in Bucharest, Paris, Washington, Buenos Aires and in Parcani in Transnistria. Museums keep his memory in Karlovo, Lovech and Kakrina, and in Antarctica Levski Ridge and Levski Peak on Livingston Island are named after him.",
+           "Hristo Botev (“The Hanging of Vasil Levski”), Ivan Vazov, Hristo Smirnenski and Nikolay Haytov all wrote about him."],
+        f:[["2007","Voted the greatest Bulgarian"],["Museums","Karlovo, Lovech, Kakrina"],["2025","Vasil Levski Sofia Airport"]]}
+    },
+    demo:[
+      [/legacy|remember|stadium|banknote|airport|named|museum|monument|greatest/i,"/legacy",2,"They tell me a stadium and a whole town carry my name. I sought no glory — I wanted my people free. Come and see."],
+      [/kakrina|captur|arrest|hang|trial|death|die|arabakonak|obshti|grave|execut/i,"/capture",2,"I have been told how my road ended — at Kakrina, and then in Sofia. Before the court I betrayed no one. Come, I will show you."],
+      [/republic|idea|equal|turk|freedom|faith|religio|believ/i,"/ideas",1,"I want a democratic republic where all peoples and faiths are equal before the law. Come, let me tell you what I fight for."],
+      [/committee|organi[sz]ation|lovech|tour|karavelov|brcc|statute|network/i,"/organisation",3,"I walked the country town by town and village by village to bind the committees into one network. Come and see how it was done."],
+      [/legion|rakovski|belgrade|hitov|standard|band|botev|mill|nickname|lion/i,"/legions",1,"In Belgrade, in Rakovski's legion, they named me Levski. Come, let me tell you of those years."],
+      [/karlovo|child|monk|deacon|monastery|born|ignatius|mother|father|school/i,"/early-life",1,"I was born in Karlovo, and before I was a rebel I was Deacon Ignatius. Come and see where I set out from."]
+    ]
+  }
+};
+
+const VAZOV = {
+  bg: {
+    kicker:"Интерактивна библиотека", title:"Иван Вазов",
+    placeholder:"Попитайте Вазов…", send:"Питай", voiceOn:"Глас: вкл.", voiceOff:"Глас: изкл.",
+    dark:"Тъмно", light:"Светло",
+    wait:"Вазов размишлява…", caption:"Иван Вазов",
+    credit:"Портрет и сведения: Уикипедия (CC BY-SA)",
+    hello:"Добре дошли! Аз съм Иван Вазов. За какво да ви разкажа — за Сопот, за „Под игото“ или за хъшовете в Браила?",
+    fallback:"Хубав въпрос! Заповядайте в библиотеката — оттам ще намерим пътя.",
+    pages:{
+      "/library":{nav:"Библиотека",h:"Библиотеката",lead:"Поет, романист, драматург — Патриархът на българската литература.",cards:true,
+        p:["Иван Вазов (1850–1921) е български поет, писател и драматург, наричан Патриарх на българската литература. Романът му „Под игото“ е най-известното произведение на българската класика. Изберете врата: зад всяка има по една глава от неговия дълъг живот."]},
+      "/early-life":{nav:"Ранни години",h:"Сопот, Калофер, Пловдив",lead:"Първите стъпки на един поет.",
+        p:["Вазов е роден на 9 юли 1850 г. в Сопот, в Розовата долина, тогава в Османската империя. Родителите му Съба и Минчо Вазови оказват голямо влияние върху бъдещия поет.",
+           "Завършва началното училище в Сопот и става помощник-учител в Калофер. После учи в Пловдив, в училището на Найден Геров, където прави първите си стъпки като поет.",
+           "Изпратен е в Олтеница, Румъния, да чиракува в търговията на чичо си. Вазов обаче бяга в Браила, където живее сред българските революционери емигранти и се запознава с Христо Ботев."],
+        f:[["1850","Роден в Сопот"],["Пловдив","Първи стихове"],["Браила","Сред хъшовете, среща с Ботев"]]},
+      "/revolution":{nav:"Комитетът",h:"Комитетът и първите книги",lead:"Поезия в годините на въстанието.",
+        p:["През 1874 г. Вазов се включва в борбата за независимост от Османската империя, а през 1875 г. се връща в Сопот и влиза в местния революционен комитет.",
+           "След разгрома на Априлското въстание през 1876 г. емигрира в Галац, където е избран за секретар на комитета. Същата година излиза стихосбирката му „Пряпорец и гусла“, а през 1877 г. — „Тъгите на България“.",
+           "След Освобождението, дошло с Руско-турската война, пише цикъла „Епопея на забравените“."],
+        f:[["1875","Сопотският революционен комитет"],["1876","„Пряпорец и гусла“"],["1877","„Тъгите на България“"]]},
+      "/under-the-yoke":{nav:"Под игото",h:"Под игото",lead:"Изгнание в Одеса и най-известният български роман.",
+        p:["Заради гоненията срещу русофилите Вазов е принуден да замине в изгнание в Одеса. По-късно се връща в България с помощта на майка си.",
+           "От 1888 г. е романът „Под игото“ — най-известното произведение на българската класическа литература, преведено на повече от 30 езика.",
+           "През 1889 г. Вазов се установява в София и започва да издава списание „Денница“."],
+        f:[["Одеса","Години в изгнание"],["1888","„Под игото“"],["30+","езика, на които е преведен романът"]]},
+      "/works":{nav:"Творчество",h:"Романи, пиеси, разкази",lead:"Половин век литература.",
+        p:["През 90-те години на XIX век излизат романът „Нова земя“ и пиесата „Хъшове“. През 1899 г. Вазов публикува „Последният ден на XX век“ — първия български научнофантастичен разказ.",
+           "През 1900 г. следват „Под нашето небе“ и пиесата „Вестникар ли?“, а през 1902 г. — романът „Казаларската царица“.",
+           "За сцената пише и пиесите „Борислав“ (1909) и „Ивайло“ (1911). През 1914 г. излизат „Песни за Македония“, а през 1920 г. — „Не ще загине!“."],
+        f:[["1899","Първият български фантастичен разказ"],["1902","„Казаларската царица“"],["1909–1911","„Борислав“ и „Ивайло“"]]},
+      "/public-life":{nav:"Общественик",h:"Министър и академик",lead:"Писателят в обществения живот.",
+        p:["От 7 септември 1897 до 30 януари 1899 г. Вазов е министър на народното просвещение от Народната партия.",
+           "Той е академик на Българската академия на науките и една от най-уважаваните личности в обществения и културния живот на новоосвободена България. През 1917 г. е номиниран за Нобелова награда за литература.",
+           "Негова спътница е Евгения Марс. Вазов умира на 22 септември 1921 г., на 71 години."],
+        f:[["1897–1899","Министър на просвещението"],["1917","Номинация за Нобелова награда"],["1921","Умира на 71 години"]]},
+      "/legacy":{nav:"Памет",h:"Памет",lead:"От Народния театър до кратер на Меркурий.",
+        p:["Домът му в София е превърнат в музей със запазена обстановка от неговото време. Голяма къща музей има и в Берковица.",
+           "Името му носят Народният театър „Иван Вазов“ в София, Народната библиотека „Иван Вазов“ в Пловдив и столичен квартал.",
+           "Извън България на негово име са улица в Братислава, нос Вазов и скала Вазов на остров Ливингстън в Антарктика, а от юни 2020 г. — и кратер на Меркурий."],
+        f:[["София","Народен театър „Иван Вазов“"],["Пловдив","Народна библиотека „Иван Вазов“"],["2020","Кратер на Меркурий"]]}
+    },
+    demo:[
+      [/памет|музей|театър|библиотек|кратер|меркурий|наречен|берковица/i,"/legacy",2,"Казват ми, че Народният театър носи моето име — а и някакъв кратер на далечна планета! Заповядайте да видите."],
+      [/министър|академи|нобел|смърт|умря|евгения|марс|парти/i,"/public-life",1,"Бях и министър на просвещението, макар че перото ми прилягаше повече от портфейла. Елате да ви разкажа."],
+      [/пиес|драм|борислав|ивайло|фантаст|нова земя|хъшове|разказ|македония/i,"/works",1,"Писах стихове, романи, пиеси — та дори и един разказ за края на двадесетия век. Елате да ги разгледаме."],
+      [/игото|одеса|изгнани|роман|денница/i,"/under-the-yoke",2,"„Под игото“ е книгата, с която най-често ме помнят. Елате да ви разкажа за нея и за годините в изгнание."],
+      [/комитет|въстани|галац|епопея|пряпорец|тъгите|стихосбирк|левски/i,"/revolution",2,"В годините на въстанието пишех с болка и надежда. Елате да ви покажа първите си книги."],
+      [/сопот|детств|калофер|пловдив|роден|браила|ботев|олтеница|родител/i,"/early-life",1,"Роден съм в Сопот, в Розовата долина, а първите си стихове написах в Пловдив. Елате да видите откъде тръгнах."]
+    ]
+  },
+  en: {
+    kicker:"An interactive library", title:"Ivan Vazov",
+    placeholder:"Ask Vazov…", send:"Ask", voiceOn:"Voice: on", voiceOff:"Voice: off",
+    dark:"Dark", light:"Light",
+    wait:"Vazov is thinking…", caption:"Ivan Vazov",
+    credit:"Portrait and facts: Wikipedia (CC BY-SA)",
+    hello:"Welcome! I am Ivan Vazov. What shall I tell you of — Sopot, “Under the Yoke”, or the exiles in Brăila?",
+    fallback:"A fine question! Do come to the library — we shall find the way from there.",
+    pages:{
+      "/library":{nav:"Library",h:"The Library",lead:"Poet, novelist, playwright — the Patriarch of Bulgarian literature.",cards:true,
+        p:["Ivan Vazov (1850–1921) was a Bulgarian poet, novelist and playwright, often called the Patriarch of Bulgarian literature. His novel “Under the Yoke” is the most famous work of classic Bulgarian literature. Choose a door: behind each is a chapter of his long life."]},
+      "/early-life":{nav:"Early life",h:"Sopot, Kalofer, Plovdiv",lead:"A poet's first steps.",
+        p:["Vazov was born on 9 July 1850 in Sopot, in the Rose Valley, then in the Ottoman Empire. His parents, Saba and Mincho Vazov, both had a great influence on the young poet.",
+           "He finished primary school in Sopot and became an assistant teacher in Kalofer. He then studied in Plovdiv, at Nayden Gerov's school, where he made his first steps as a poet.",
+           "He was sent to Oltenița in Romania to be apprenticed in his uncle's trading business. Instead Vazov fled to Brăila, where he lived among the exiled Bulgarian revolutionaries and met Hristo Botev."],
+        f:[["1850","Born in Sopot"],["Plovdiv","First poems"],["Brăila","Among the exiles; meets Botev"]]},
+      "/revolution":{nav:"Committee",h:"The committee and the first books",lead:"Poetry in the years of the uprising.",
+        p:["In 1874 Vazov joined the struggle for independence from the Ottoman Empire, and in 1875 he returned to Sopot and entered the local revolutionary committee.",
+           "After the April Uprising failed in 1876 he went into exile in Galați, where he was appointed secretary of the committee. That year his collection “Priaporetz and Gusla” appeared, followed in 1877 by “Bulgaria's Sorrows”.",
+           "After the Liberation that came with the Russo-Turkish War he wrote the cycle “Epic of the Forgotten”."],
+        f:[["1875","The Sopot revolutionary committee"],["1876","“Priaporetz and Gusla”"],["1877","“Bulgaria's Sorrows”"]]},
+      "/under-the-yoke":{nav:"Under the Yoke",h:"Under the Yoke",lead:"Exile in Odessa and the best-known Bulgarian novel.",
+        p:["Because of the persecution of the russophile faction, Vazov was forced into exile in Odessa. He later returned to Bulgaria with his mother's help.",
+           "The novel “Under the Yoke” dates from 1888. It is the most famous work of classic Bulgarian literature and has been translated into more than 30 languages.",
+           "In 1889 Vazov moved to Sofia and began publishing the review Dennitsa."],
+        f:[["Odessa","Years in exile"],["1888","“Under the Yoke”"],["30+","languages the novel is translated into"]]},
+      "/works":{nav:"Works",h:"Novels, plays, stories",lead:"Half a century of literature.",
+        p:["In the 1890s came the novel “New Country” and the play “Vagabonds”. In 1899 Vazov published “The Last Day of the 20th Century”, the first Bulgarian science-fiction story.",
+           "In 1900 followed “Under Our Heaven” and the play “A Newspaperman?”, and in 1902 the novel “The Empress of Kazalar”.",
+           "For the stage he also wrote the plays “Borislav” (1909) and “Ivaylo” (1911). “Songs of Macedonia” appeared in 1914 and “It Will Not Perish” in 1920."],
+        f:[["1899","First Bulgarian science-fiction story"],["1902","“The Empress of Kazalar”"],["1909–1911","“Borislav” and “Ivaylo”"]]},
+      "/public-life":{nav:"Public life",h:"Minister and academician",lead:"The writer in public life.",
+        p:["From 7 September 1897 to 30 January 1899 Vazov was Minister of Education for the People's Party.",
+           "He was an academician of the Bulgarian Academy of Sciences and one of the most respected figures in the social and cultural life of newly independent Bulgaria. In 1917 he was nominated for the Nobel Prize in Literature.",
+           "His partner was Evgenia Mars. Vazov died on 22 September 1921, aged 71."],
+        f:[["1897–1899","Minister of Education"],["1917","Nobel Prize nomination"],["1921","Dies aged 71"]]},
+      "/legacy":{nav:"Legacy",h:"Legacy",lead:"From the National Theatre to a crater on Mercury.",
+        p:["His home in Sofia has been turned into a museum, furnished as it was in his day. There is also a large house museum in Berkovitsa.",
+           "The Ivan Vazov National Theatre in Sofia, the Ivan Vazov National Library in Plovdiv and a neighbourhood of the capital bear his name.",
+           "Outside Bulgaria, a street in Bratislava, Vazov Point and Vazov Rock on Livingston Island in Antarctica and, since June 2020, a crater on Mercury are named after him."],
+        f:[["Sofia","Ivan Vazov National Theatre"],["Plovdiv","Ivan Vazov National Library"],["2020","A crater on Mercury"]]}
+    },
+    demo:[
+      [/legacy|remember|museum|theatre|theater|library|crater|mercury|named|berkovitsa/i,"/legacy",2,"They tell me the National Theatre carries my name — and a crater on a distant planet too! Do come and see."],
+      [/minister|academ|nobel|death|die|evgenia|mars|party|politic/i,"/public-life",1,"I was Minister of Education for a time, though the pen suited me better than the portfolio. Come, let me tell you."],
+      [/play|drama|borislav|ivaylo|science|fiction|new country|vagabond|story|macedonia/i,"/works",1,"I wrote poems, novels, plays — even a tale about the end of the twentieth century. Come, let us look through them."],
+      [/yoke|odessa|exile|novel|dennitsa/i,"/under-the-yoke",2,"“Under the Yoke” is the book I am most remembered for. Come, let me tell you of it and of my years in exile."],
+      [/committee|uprising|galati|epic|priaporetz|sorrows|collection|levski/i,"/revolution",2,"In the years of the uprising I wrote with pain and with hope. Come and see my first books."],
+      [/sopot|child|kalofer|plovdiv|born|braila|botev|oltenita|parent|school/i,"/early-life",1,"I was born in Sopot, in the Rose Valley, and wrote my first verses in Plovdiv. Come and see where I set out from."]
+    ]
+  }
+};
+
+/* ---------- FIGURES ----------
+   To add a figure: write its strings object (same shape as LEVSKI / VAZOV)
+   and add one entry here. Nothing else changes. */
+const FIGURES = {
+  aleko:{ wiki:"Aleko_Konstantinov", about:{ bg:"Аз съм Алеко Константинов — писател, адвокат и пътешественик, роден в Свищов през 1863 година. Написах „Бай Ганьо“ и „До Чикаго и назад“ и поведох софиянци към Черни връх. Приятелите ми ме знаят като Щастливеца.", en:"I am Aleko Konstantinov — writer, lawyer and traveller, born in Svishtov in 1863. I wrote Bay Ganyo and To Chicago and Back, and I led the people of Sofia up Cherni Vrah. My friends know me as the Happy Man." },
+          web:{ bg:"Алеко_Константинов", en:"Aleko_Konstantinov" }, years:"1863 – 1897", mono:"А", t:ALEKO,
+          sources:[["Уикипедия: Алеко Константинов","https://bg.wikipedia.org/wiki/Алеко_Константинов","bg"],
+                   ["Wikipedia: Aleko Konstantinov","https://en.wikipedia.org/wiki/Aleko_Konstantinov","en"],
+                   ["Bulgarian National Bank: 100 levs banknote, 2003 issue","https://www.bnb.bg/NotesAndCoins/NACNotesCurrency/NOTE_2003_100BGN_EN"]],
+          cited:["М. Арнаудов, „Алеко Константинов“ (1929)","Г. Марков, „Покушения, насилие и политика в България 1878–1947“ (2003)","Р. Шивачев, „Алеко Константинов“, Речник на българската литература след Освобождението","Г. Панчев, „Биография на Алеко Константинов“ (2003)"],
+          routes:["/library","/early-life","/public-life","/chicago","/bay-ganyo","/works","/vitosha","/assassination","/legacy"] },
+  botev:{ wiki:"Hristo_Botev", about:{ bg:"Аз съм Христо Ботев — поет, публицист и революционер, роден в Калофер. Писах стихове и вестници за свободата, а през 1876 година поведох чета през Дунав с парахода „Радецки“.", en:"I am Hristo Botev — poet, journalist and revolutionary, born in Kalofer. I wrote poems and newspapers for freedom, and in 1876 I led a company across the Danube on the steamer Radetzky." },
+          web:{ bg:"Христо_Ботев", en:"Hristo_Botev" }, years:"1848 – 1876", mono:"Б", t:BOTEV,
+          sources:[["Wikipedia: Hristo Botev","https://en.wikipedia.org/wiki/Hristo_Botev","en"]],
+          cited:["З. Дафинов, „Безсмъртен и гениален. Автентичният Христо Ботев“ (2007)","C. Moser, “A History of Bulgarian Literature 865–1944” (2019)","B. Penchev, “Hristo Botev and the Necessity of National Icons” (2010)","Д. Косев и др., „История на България“ (1961)"],
+          routes:["/library","/early-life","/exile","/journalism","/poetry","/radetzky","/legacy"] },
+  levski:{ wiki:"Vasil_Levski", about:{ bg:"Аз съм Васил Левски, роден в Карлово през 1837 година. Бях дякон, после знаменосец в четата на Панайот Хитов, а накрая обходих страната, за да вържа тайните комитети в една организация за свободата на народа.", en:"I am Vasil Levski, born in Karlovo in 1837. I was a deacon, then standard-bearer in Panayot Hitov's band, and at last I walked the country to bind the secret committees into one organisation for my people's freedom." },
+          web:{ bg:"Васил_Левски", en:"Vasil_Levski" }, years:"1837 – 1873", mono:"Л", t:LEVSKI,
+          sources:[["Wikipedia: Vasil Levski","https://en.wikipedia.org/wiki/Vasil_Levski","en"]], cited:[],
+          routes:["/library","/early-life","/legions","/organisation","/ideas","/capture","/legacy"] },
+  vazov:{ wiki:"Ivan_Vazov", about:{ bg:"Аз съм Иван Вазов, роден в Сопот през 1850 година. Цял живот писах — стихове, разкази, пиеси и романа „Под игото“ — а за кратко бях и министър на просвещението.", en:"I am Ivan Vazov, born in Sopot in 1850. I wrote all my life — poems, stories, plays and the novel Under the Yoke — and for a short while I was Minister of Education." },
+          web:{ bg:"Иван_Вазов", en:"Ivan_Vazov" }, years:"1850 – 1921", mono:"В", t:VAZOV,
+          sources:[["Wikipedia: Ivan Vazov","https://en.wikipedia.org/wiki/Ivan_Vazov","en"]], cited:[],
+          routes:["/library","/early-life","/revolution","/under-the-yoke","/works","/public-life","/legacy"] }
+};
+const UI = {
+  bg:{ searching:"Търся в мрежата…", found:"Ето какво се знае за мен по този въпрос — отворих страницата и подчертах мястото.", off:"Чатботът е изключен, затова отговарям с готови реплики. За истински разговор сложете API ключ в start файла и пуснете сайта оттам.", cantOpenTitle:"Страницата не може да се отвори", cantOpen:"Няма връзка с този сайт. Статиите от Уикипедия се отварят направо; за други сайтове трябва да е пуснат сървърът (start.bat или start.command).", proof:"Вижте доказателството на страницата", from:"Източник:", sources:"Източници", cited:"Тези статии се позовават на:" },
+  en:{ searching:"Searching the web…", found:"Here is what is known about me on that. I have opened the page and marked the place.", off:"The chatbot is off, so I answer with prepared lines. For real conversation, put an API key in the start file and run the site from it.", cantOpenTitle:"This page cannot be opened", cantOpen:"This site could not be reached. Wikipedia articles open directly; other sites need the server running (start.bat or start.command).", proof:"See the proof on the page", from:"Source:", sources:"Sources", cited:"Those articles cite:" }
+};
+
+/* ---------- STATE ---------- */
+const store = { get:k => { try { return localStorage.getItem(k); } catch { return null; } },
+                set:(k,v) => { try { localStorage.setItem(k, v); } catch {} } };
+let lang = store.get("lang") || ((navigator.language||"").startsWith("bg") ? "bg" : "en");
+let chatOn = null;                              // true once server.js reports a chatbot key
+let voice = true, busy = false, audio = null, ttsDown = false, shown = null;
+let mark = null;                                // { fig, r, p, quote }: the paragraph highlighted as proof
+const photos = {}, histories = {}, msgs = {};      // all keyed by figure id
+const $ = id => document.getElementById(id);
+
+/* ---------- THEME ---------- */
+const root = document.documentElement;
+if (store.get("theme")) root.dataset.theme = store.get("theme");
+const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+
+/* ---------- ROUTER: #/<figure>/<section> ---------- */
+function where(){
+  const parts = location.hash.replace(/^#\/?/, "").split("/");
+  const known = !!FIGURES[parts[0]], fig = known ? parts[0] : DEFAULT_FIGURE;
+  if (known && parts[1] === "web" && parts[2]){          // #/<figure>/web/<encoded address>: a real web page
+    let url = null; try { url = norm(decodeURIComponent(parts.slice(2).join("/"))); } catch {}
+    if (url) return { fig, r:"/library", url };
+  }
+  const r = "/" + ((known ? parts[1] : parts[0]) || "library");
+  return { fig, r: FIGURES[fig].routes.includes(r) ? r : "/library" };
+}
+const link = (fig, r) => "#/" + fig + r;
+const ADDR = "library://";
+function go(fig, r, p, quote){                  // move to a section and, if p is given, highlight paragraph p as proof
+  if (!FIGURES[fig].routes.includes(r)) return;
+  mark = p ? { fig, r, p, quote } : null;
+  if (location.hash === link(fig, r)){ render(); pulse(); toMark(); } else location.hash = link(fig, r);
+}
+function toMark(){
+  const m = document.querySelector("#page p.proof");
+  if (m) m.scrollIntoView({ behavior:"smooth", block:"center" }); else $("view").scrollTop = 0;
+}
+function pulse(){ const l = $("load"); l.classList.remove("go"); void l.offsetWidth; l.classList.add("go"); }   // "page loading" stripe
+
+function el(tag, text, cls){ const e = document.createElement(tag); if (text) e.textContent = text; if (cls) e.className = cls; return e; }
+
+function render(){
+  const { fig, r, url } = where(), F = FIGURES[fig], t = F.t[lang], pg = t.pages[r];
+  root.lang = lang;
+  if (!url) document.title = pg.h + " · " + t.title;
+  $("view").hidden = !!url; $("web").hidden = !url; $("outBtn").hidden = !url;   // library page or web page
+  if (!url && (find.hits.length || !$("find").hidden)) resetFind();
+  $("kicker").textContent = t.kicker; $("title").textContent = t.title; $("title").href = link(fig, "/library");
+  $("years").textContent = F.years;
+  if (document.activeElement !== $("addr")) $("addr").value = url ? pretty(url) : ADDR + fig + r;   // the browser's address bar
+  $("input").placeholder = t.placeholder; $("send").textContent = t.send;
+  $("voiceBtn").textContent = voice ? t.voiceOn : t.voiceOff;
+  $("themeBtn").textContent = isDark() ? "☀" : "☾"; $("themeBtn").title = isDark() ? t.light : t.dark;
+  $("footer").textContent = t.credit;
+  $("mode").hidden = chatOn !== false; $("mode").textContent = UI[lang].off;
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+
+  const figs = $("figs"); figs.replaceChildren();
+  Object.keys(FIGURES).forEach(id => { const a = el("a", FIGURES[id].t[lang].title); a.href = link(id, "/library"); if (id === fig) a.setAttribute("aria-current","true"); figs.append(a); });
+
+  const nav = $("nav"); nav.replaceChildren();
+  F.routes.forEach(p => { const a = el("a", t.pages[p].nav); a.href = link(fig, p); if (p === r && !url) a.setAttribute("aria-current","page"); nav.append(a); });
+
+  const page = $("page"); page.replaceChildren(el("h2", pg.h), el("p", pg.lead, "lead"));
+  if (pg.cards && photos[fig]){
+    const figure = el("figure", "", "portrait"), img = el("img");
+    img.src = photos[fig].full; img.alt = t.caption; figure.append(img, el("figcaption", t.caption)); page.append(figure);
+  }
+  const wiki = F.sources.find(x => x[2] === lang) || F.sources[0];
+  (pg.p || []).forEach((x, i) => {
+    const p = el("p", x, "body"); page.append(p);
+    if (!mark || mark.fig !== fig || mark.r !== r || mark.p !== i + 1) return;
+    p.classList.add("proof");                   // the proof for the last answer
+    const at = mark.quote ? x.indexOf(mark.quote) : -1;
+    if (at >= 0) p.replaceChildren(x.slice(0, at), el("mark", mark.quote), x.slice(at + mark.quote.length));
+    const c = el("p", UI[lang].from + " ", "cite"), a = el("a", wiki[0]);
+    a.href = wiki[1]; a.target = "_blank"; a.rel = "noopener"; c.append(a); page.append(c);
+  });
+  if (pg.cards){
+    const grid = el("div", "", "cards");
+    F.routes.filter(p => p !== "/library").forEach(p => {
+      const c = el("a", "", "card"); c.href = link(fig, p);
+      c.append(el("h3", t.pages[p].h), el("span", t.pages[p].lead)); grid.append(c);
+    });
+    page.append(grid);
+  }
+  if (pg.f){
+    const ul = el("ul", "", "facts");
+    pg.f.forEach(([y, x]) => { const li = el("li"); li.append(el("b", y), el("span", x)); ul.append(li); });
+    page.append(ul);
+  }
+  const box = el("div", "", "sources"), list = el("ul");
+  F.sources.forEach(([title, url]) => { const li = el("li"), a = el("a", title); a.href = url; a.target = "_blank"; a.rel = "noopener"; li.append(a); list.append(li); });
+  box.append(el("h3", UI[lang].sources), list);
+  if (F.cited.length) box.append(el("p", UI[lang].cited + " " + F.cited.join("; ") + "."));
+  page.append(box);
+
+  if (shown !== fig){                           // switched figure: swap the guide
+    shown = fig; stopSpeech();
+    if (!msgs[fig]){ msgs[fig] = [{ text:t.hello, who:"aleko" }]; histories[fig] = []; }
+    $("log").replaceChildren(); msgs[fig].forEach(m => draw(m.text, m.who, m.ev));
+    setMono(fig); loadPhoto(fig);
+  }
+}
+
+/* ---------- PORTRAIT (from the figure's Wikipedia article) ---------- */
+function setMono(fig){
+  if (!photos[fig]) return $("mono").replaceChildren(FIGURES[fig].mono);
+  const img = el("img"); img.alt = FIGURES[fig].t[lang].caption; img.src = photos[fig].thumb;
+  $("mono").replaceChildren(img);
+}
+async function loadPhoto(fig){
+  if (fig in photos) return;
+  photos[fig] = null;
+  try {
+    const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + FIGURES[fig].wiki);
+    const j = await res.json();
+    const full = (j.originalimage && j.originalimage.source) || (j.thumbnail && j.thumbnail.source);
+    if (!full) return;
+    photos[fig] = { full, thumb: (j.thumbnail && j.thumbnail.source) || full };
+    if (where().fig === fig){ setMono(fig); render(); }
+  } catch {}                                   // monogram stays if offline
+}
+
+/* ---------- VOICE (male) ----------
+   The text is always Bulgarian (or English); only the voice reading it changes.
+   1. If server.js is running with a speech key, its studio male voice is used.
+   2. Otherwise the browser's own speech. For Bulgarian it tries, in order:
+      a male Bulgarian voice (Edge has "Borislav"); a male RUSSIAN voice reading
+      the Bulgarian text (Pavel on Windows, Dmitry in Edge, Yuri on Apple
+      devices); and last, whatever Bulgarian voice exists with the pitch pulled
+      right down, so the figure is never silent. */
+const MALE   = /\b(male|man|borislav|ivan|pavel|dmitry|dmitri|yuri|maxim|ryan|george|daniel|thomas|oliver|arthur|david|mark|guy|christopher|eric|james|brian|andrew|william|liam|noah|fred|ralph|albert|aaron|gordon|rishi|alex)\b|павел|дмитрий|юрий|максим/i;
+const FEMALE = /\b(female|woman|kalina|milena|irina|svetlana|dariya|daria|katya|ekaterina|alena|tatyana|zira|hazel|susan|samantha|victoria|karen|moira|tessa|fiona|kate|serena|sonia|libby|maisie|jenny|aria|emma|ava|allison|michelle|linda|heather|catherine|martha|google)\b|милена|ирина/i;
+const talking = on => $("avatar").classList.toggle("speaking", on);
+
+function stopSpeech(){
+  if (audio){ audio.pause(); audio = null; }
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  talking(false);
+}
+
+function voices(){
+  return new Promise(res => {
+    const now = speechSynthesis.getVoices();
+    if (now.length) return res(now);
+    const done = () => res(speechSynthesis.getVoices());
+    speechSynthesis.addEventListener("voiceschanged", done, { once:true });
+    setTimeout(done, 800);
+  });
+}
+
+// A Russian voice reads these Bulgarian letters differently; rewrite them for the ear only.
+const forRussianVoice = t => t.replace(/щ/g, "шт").replace(/Щ/g, "Шт").replace(/ъ/g, "а").replace(/Ъ/g, "А").replace(/ѝ/g, "и");
+
+async function browserSpeak(text){
+  if (!("speechSynthesis" in window)) return;
+  const all = await voices();
+  const of = code => all.filter(x => x.lang.toLowerCase().startsWith(code));
+  const quality = x => (/natural|neural|online/i.test(x.name) ? 2 : 0) + (/en-gb/i.test(x.lang) ? 1 : 0);
+  const best = list => list.sort((a, b) => quality(b) - quality(a))[0] || null;
+  const males = list => list.filter(x => MALE.test(x.name) && !FEMALE.test(x.name));
+  const own = of(lang), ru = lang === "bg" ? of("ru") : [];
+
+  let v = best(males(own)), male = !!v;
+  if (!v && (v = best(males(ru)))){ male = true; text = forRussianVoice(text); }      // male Russian voice, Bulgarian words
+  if (!v) v = best(own.filter(x => !FEMALE.test(x.name))) || best(own);
+  if (!v && (v = best(ru))) text = forRussianVoice(text);
+
+  const u = new SpeechSynthesisUtterance(text);
+  if (v) u.voice = v;
+  u.lang = v ? v.lang : (lang === "bg" ? "bg-BG" : "en-GB");
+  u.rate = .92;
+  u.pitch = male ? .9 : .3;                    // not a known male voice: pull the pitch right down
+  u.onstart = () => talking(true); u.onend = u.onerror = () => talking(false);
+  speechSynthesis.speak(u);
+}
+
+async function speak(fig, text){
+  if (!voice) return;
+  stopSpeech();
+  if (ttsDown) return browserSpeak(text);
+  try {
+    const res = await fetch(TTS_URL, { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ figure:fig, lang, text }) });
+    const blob = await res.blob();
+    if (!res.ok || !blob.type.startsWith("audio")) throw new Error("no audio");
+    const a = audio = new Audio(URL.createObjectURL(blob));
+    a.onplay = () => talking(true); a.onended = a.onpause = () => talking(false);
+    await a.play();
+  } catch { ttsDown = true; browserSpeak(text); }   // no studio voice: stop asking, use the browser
+}
+if ("speechSynthesis" in window) speechSynthesis.getVoices();   // warm up the voice list
+
+/* ---------- WEB: the pane as a real browser ----------
+   Asking the guide opens a real web page inside the pane and marks the passage
+   that answers the question, like find-in-page (F3 steps through the matches).
+   - Wikipedia articles are fetched straight from Wikipedia's public API and
+     shown in a clean reading layout. This works even without server.js.
+   - Any other site is fetched through server.js (PAGE_URL), because browsers do
+     not let one site read or embed another directly.
+   Pages are shown in a sandboxed frame with scripts removed, so they cannot run
+   code here; the cost is that script-driven sites show little. */
+const pages = new Map();                          // url -> { html, title, doc }
+let want = null;                                  // { url, terms, label }: what to mark once that page is up
+const scrolls = new Map();                        // url -> how far the visitor had scrolled
+function saveScroll(){ const d = $("web").contentDocument; if (ready && d && d.scrollingElement && !$("web").hidden) scrolls.set(ready, d.scrollingElement.scrollTop); }
+let target = null, ready = null, loadToken = 0;   // url requested / url now in the frame
+const find = { hits:[], i:-1, q:"" };
+
+const STOP = new Set(("какво каква какви какъв кога къде защо как кой коя кои кое разкажи кажи беше били бил била това тази този тези " +
+  "твоя твой твоите твоето твоят има имаш нещо повече със при или през във той моля ами стана става " +
+  "колко kolko твоята твои себе теб тебе мен мене вие ние съм сте бях живот живота искам знам зная кажете разкажете малко много още " +
+  "sebe teb tebe men mene vie nie sam sum sym ste tvoq tvoqta tvoi tvoite tvoya tvoyata jivot zhivot jivota iskam znam malko mnogo oshte o6te " +
+  "yourself myself life know want much many some just " +
+  "kakvo kakva kakvi kakav kakuv kakyv koga kade kude kyde zashto zasto kak koi koq koya koe razkaji razkazhi kaji kazhi beshe bil bila bili tova tazi tozi tezi ima imash neshto poveche pri ili prez molq molya stana stava sas sus " +
+  "what when where why who how tell about your you did does was were the and for with that this have had are his her him more please can could would which from into they there happened").split(" "));
+const words = s => s.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
+// Match word beginnings, so endings do not matter: "учил" finds "учи", "роден" finds "родена".
+const stem = w => w.length > 5 ? w.slice(0, 5) : w.length > 3 ? w.slice(0, -1) : w;
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const EXT = new Map();                            // word beginning -> how many more letters a match may have
+const rx = terms => new RegExp("(?<![\\p{L}\\p{N}])(?:" + terms.map(t => esc(t) + "[\\p{L}\\p{N}]{0," + (EXT.has(t) ? EXT.get(t) : 3) + "}").join("|") + ")(?![\\p{L}\\p{N}])", "giu");
+const norm = url => { try { const u = new URL(url); return /^https?:$/.test(u.protocol) ? u.href : null; } catch { return null; } };
+const pretty = url => { try { return decodeURI(url); } catch { return url; } };
+const wikiUrl = (l, title) => "https://" + l + ".wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+
+/* ----- Bulgarian typed in Latin letters ("kakvo stana na parahoda Radecki") -----
+   People spell it many ways (j = ж or й, y = й or ъ, a = а or ъ, 4 = ч, 6 = ш ...),
+   so each Latin word is turned into all its likely Cyrillic spellings and any of
+   them may match the page. Only the start of a word matters for matching. */
+const LAT = { sht:["щ"], sch:["щ"], sh:["ш"], ch:["ч"], zh:["ж"], ts:["ц"], tz:["ц"], yu:["ю"], iu:["ю"], ju:["ю"], ya:["я"], ia:["я","ия"], ja:["я","жа"], yo:["йо","ьо"],
+  a:["а","ъ"], b:["б"], c:["ц","к"], d:["д"], e:["е"], f:["ф"], g:["г"], h:["х"], i:["и","й"], j:["ж","й"], k:["к"], l:["л"], m:["м"], n:["н"], o:["о"], p:["п"], q:["я"],
+  r:["р"], s:["с"], t:["т"], u:["у","ъ"], v:["в"], w:["в"], x:["х","кс"], y:["й","ъ","и"], z:["з"], 4:["ч"], 6:["ш"] };
+const LAT_RE = /sht|sch|sh|ch|zh|ts|tz|yu|iu|ju|ya|ia|ja|yo|[a-z46]/g;
+const isLatin = w => /^[a-z46]+$/.test(w) && /[a-z]/.test(w);
+function cyr(word, enough = 6, cap = 48){          // likely Cyrillic spellings of a Latin word (or of its first letters)
+  let outs = [""];
+  for (const u of word.match(LAT_RE) || []){
+    if (outs.every(o => o.length >= enough)) break;
+    const next = [];
+    for (const o of outs) for (const c of LAT[u]) if (next.length < cap) next.push(o + c);
+    outs = next;
+  }
+  return [...new Set(outs)];
+}
+const cyr1 = w => (w.match(LAT_RE) || []).map(u => LAT[u][0]).join("");          // the single most likely spelling
+// A question as the matcher should hear it: the original plus Cyrillic spellings of any Latin words.
+const hear = q => lang === "bg" ? q + " " + words(q).filter(isLatin).flatMap(w => cyr(w, 99, 24)).join(" ") : q;
+
+// The words of a question worth searching for: no filler words, and not the figure's own name.
+// A Latin word contributes several spellings; CANON remembers they are one word.
+const CANON = new Map(), FULL = new Map();         // spelling -> its word; word -> how to search for it
+const groups = terms => new Set(terms.map(t => CANON.get(t) || t)).size;
+const nameWords = fig => [...new Set(["bg", "en"].flatMap(l => words(FIGURES[fig].t[l].title)))];
+const SAME = { "набор":"роден", "възраст":"роден", "годишен":"роден", "години":"роден" };   // everyday words -> the word articles use
+function keyTerms(q, fig){
+  const names = nameWords(fig), out = [];
+  for (let w of words(q)){
+    const latin = lang === "bg" && isLatin(w), whole = latin ? cyr(w, 99, 24) : [w];
+    if (STOP.has(w) || whole.some(v => STOP.has(v))) continue;
+    if (whole.some(v => names.some(n => v.startsWith(n) && v.length <= n.length + 3))) continue;   // the figure's own name
+    const same = whole.map(v => SAME[v]).find(Boolean);
+    if (same) w = same;
+    const vs = [...new Set((same || !latin ? [w] : [w, ...cyr(w)]).map(stem))];
+    vs.forEach(s => {
+      if (!out.includes(s)){ out.push(s); CANON.set(s, vs[0]); }
+      EXT.set(s, Math.max(EXT.get(s) || 0, w.length + 2 - s.length));
+    });
+    FULL.set(vs[0], latin && !same ? cyr1(w) : w);
+  }
+  return out;
+}
+
+// Rank the passages of a page for a question. More different question words is
+// better; rare words count for more than common ones; a section whose heading
+// matches offers its opening paragraph.
+const SKIP = ".references,.reflist,.navbox,.catlinks,.mw-editsection,.toc,#toc,.hatnote,.infobox,nav,footer,header,sup,style,script";
+const clean = s => s.replace(/\[[^\]]{1,12}\]/g, "").replace(/\s+/g, " ").trim();
+function rank(rootEl, terms){
+  if (!terms.length) return [];
+  const re = rx(terms), canon = m => { const t = terms.find(x => m.startsWith(x)); return CANON.get(t) || t; };
+  const hitsOf = text => new Set((text.toLowerCase().match(re) || []).map(canon));
+  const rows = [], df = new Map(); let head = "", headGot = new Set(), first = true;
+  rootEl.querySelectorAll("h2,h3,p,li,dd,blockquote").forEach(b => {
+    if (b.closest(SKIP)) return;
+    const text = b.textContent;
+    if (/^H\d$/.test(b.tagName)){ head = clean(text); headGot = hitsOf(head); first = true; return; }
+    if (text.length < 40) return;
+    const got = hitsOf(text); if (first && !got.size) headGot.forEach(g => got.add(g));
+    first = false;
+    if (!got.size) return;
+    got.forEach(g => df.set(g, (df.get(g) || 0) + 1));
+    rows.push({ el:b, head, got, n:got.size, p:b.tagName === "P" });
+  });
+  rows.forEach(r => { r.s = r.n * 10 + [...r.got].reduce((s, g) => s + 8 / Math.sqrt(df.get(g)), 0) + (r.p ? 2 : 0); });
+  return rows.sort((a, b) => b.s - a.s);
+}
+const bestBlock = (rootEl, terms) => rank(rootEl, terms)[0] || null;
+const snip = s => { s = s.replace(/\[[^\]]{1,12}\]/g, "").replace(/\s+/g, " ").trim(); return s.length > 240 ? s.slice(0, 240).replace(/\s\S*$/, "") + "…" : s; };
+
+/* ----- find-in-page: works on a web page in the frame or on a library page ----- */
+const surface = () => where().url ? ($("web").contentDocument && $("web").contentDocument.body) : $("page");
+
+function markAll(rootEl, re){                     // wrap every match in <mark class="hit">
+  const doc = rootEl.ownerDocument, walker = doc.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT), nodes = [], hits = [];
+  for (let n; (n = walker.nextNode()); ) if (n.nodeValue.trim() && !n.parentElement.closest("script,style,mark.hit")) nodes.push(n);
+  for (const n of nodes){
+    const text = n.nodeValue; let m, last = 0, frag = null; re.lastIndex = 0;
+    while ((m = re.exec(text)) && hits.length < 3000){
+      if (!m[0]){ re.lastIndex++; continue; }
+      frag = frag || doc.createDocumentFragment();
+      const k = doc.createElement("mark"); k.className = "hit"; k.textContent = m[0];
+      frag.append(text.slice(last, m.index), k); hits.push(k); last = m.index + m[0].length;
+    }
+    if (frag){ frag.append(text.slice(last)); n.replaceWith(frag); }
+  }
+  return hits;
+}
+function clearMarks(rootEl){
+  rootEl.querySelectorAll("mark.hit").forEach(k => k.replaceWith(k.textContent));
+  rootEl.querySelectorAll(".best").forEach(b => b.classList.remove("best"));
+  rootEl.normalize();
+}
+function count(){ $("findn").textContent = find.hits.length ? (find.i + 1) + " / " + find.hits.length : (find.q ? "0" : ""); }
+function step(d, at){                             // F3: go to the next (or previous) match
+  if (!find.hits.length) return;
+  if (find.hits[find.i]) find.hits[find.i].classList.remove("cur");
+  find.i = at != null ? at : (find.i + d + find.hits.length) % find.hits.length;
+  const k = find.hits[find.i]; k.classList.add("cur"); k.scrollIntoView({ block:"center" });
+  count();
+}
+function runFind(re, label, pick){                // mark all matches; start at the best passage if given
+  const rootEl = surface(); if (!rootEl) return;
+  clearMarks(rootEl);
+  find.hits = re ? markAll(rootEl, re) : []; find.i = -1; find.q = re ? label : "";
+  $("find").hidden = !re; $("findq").value = find.q;
+  let start = 0;
+  if (pick){ pick.classList.add("best"); start = Math.max(0, find.hits.findIndex(h => pick.contains(h))); }
+  if (find.hits.length) step(0, start); else count();
+}
+function resetFind(){ find.hits = []; find.i = -1; find.q = ""; $("find").hidden = true; }
+
+/* ----- loading pages ----- */
+const READER_CSS = `
+  body.reader{max-width:840px;margin:0 auto;padding:26px 28px 60px;background:var(--paper);color:var(--ink);font:18px/1.6 "PT Serif",Georgia,serif;overflow-wrap:break-word}
+  .reader h1,.reader h2,.reader h3{font-family:"Playfair Display",Georgia,serif;line-height:1.2}
+  .reader h1{font-size:38px;margin:0}.reader h2{font-size:26px;margin:32px 0 10px;padding-bottom:4px;border-bottom:1px solid var(--rule)}
+  .reader .from{font-size:13px;color:var(--muted);font-style:italic;margin:4px 0 22px;padding-bottom:14px;border-bottom:3px double var(--rule)}
+  .reader a{color:var(--accent)}.reader img{max-width:100%;height:auto}
+  .reader table{border-collapse:collapse;font-size:15px;max-width:100%}.reader td,.reader th{border:1px solid var(--rule);padding:4px 8px;vertical-align:top}
+  .reader .infobox,.reader figure,.reader .thumb{float:right;clear:right;max-width:270px;margin:0 0 14px 22px;font-size:14px;line-height:1.4}
+  .reader figure{text-align:center;color:var(--muted)}.reader sup{font-size:11px}.reader blockquote{border-left:3px solid var(--rule);margin:16px 0;padding-left:16px}
+  @media (max-width:640px){body.reader{padding:18px 16px 40px;font-size:17px}.reader .infobox,.reader figure,.reader .thumb{float:none;margin:0 auto 14px;max-width:100%}}`;
+const HIT_CSS = `
+  mark.hit{background:#ffe066;color:#1a1a1a;border-radius:2px;padding:0 1px}
+  mark.hit.cur{background:#ff8a3d;box-shadow:0 0 0 2px #ff8a3d}
+  .best{background:rgba(255,224,102,.22);box-shadow:-10px 0 0 rgba(255,224,102,.22),-13px 0 0 #ff8a3d}`;
+
+function build(body, base, title, reader){        // make a fetched page safe to show: no scripts, no frames, no handlers
+  const d = new DOMParser().parseFromString(body, "text/html");
+  d.querySelectorAll("script,iframe,frame,frameset,object,embed,base,form,noscript,meta[http-equiv]" + (reader ? ",style,link,.mw-editsection,.navbox,.mw-empty-elt" : "")).forEach(n => n.remove());
+  d.querySelectorAll("*").forEach(n => { for (const a of [...n.attributes]) if (/^on/i.test(a.name) || (/^(href|src|action)$/i.test(a.name) && /^\s*javascript:/i.test(a.value))) n.removeAttribute(a.name); });
+  const b = d.createElement("base"); b.href = base; d.head.prepend(b);
+  const s = d.createElement("style"); s.textContent = (reader ? READER_CSS : "") + HIT_CSS; d.head.append(s);
+  if (reader){
+    d.body.className = "reader";
+    const h = d.createElement("h1"); h.textContent = title;
+    const f = d.createElement("p"); f.className = "from"; f.textContent = new URL(base).hostname + " · CC BY-SA";
+    d.body.prepend(h, f);
+  }
+  return { html:"<!doctype html>" + d.documentElement.outerHTML, title: title || d.title || base, doc:d };
+}
+
+async function getPage(url){
+  if (pages.has(url)) return pages.get(url);
+  const wiki = url.match(/^https?:\/\/([a-z-]+)\.(?:m\.)?wikipedia\.org\/wiki\/([^?#]+)/);
+  let pg;
+  if (wiki){                                      // Wikipedia: its own API, no server needed
+    const res = await fetch("https://" + wiki[1] + ".wikipedia.org/w/api.php?action=parse&prop=text&redirects=1&format=json&formatversion=2&origin=*&page=" + encodeURIComponent(decodeURIComponent(wiki[2])));
+    const j = await res.json(); if (!j.parse) throw new Error("no such page");
+    pg = build(j.parse.text, "https://" + wiki[1] + ".wikipedia.org/", j.parse.title, true);
+  } else {                                        // anything else: through server.js
+    const res = await fetch(PAGE_URL + "?url=" + encodeURIComponent(url)); if (!res.ok) throw new Error("unreachable");
+    const j = await res.json(); pg = build(j.html, j.url, "", false);
+  }
+  pages.set(url, pg); return pg;
+}
+const errorPage = url => build("<p>" + UI[lang].cantOpen + "</p>", url, UI[lang].cantOpenTitle, true);
+
+function themeFrame(){                            // the reading layout follows the site's light or dark theme
+  const doc = $("web").contentDocument; if (!doc) return;
+  const cs = getComputedStyle(root);
+  ["--paper", "--paper-2", "--ink", "--muted", "--accent", "--rule"].forEach(v => doc.documentElement.style.setProperty(v, cs.getPropertyValue(v)));
+}
+function hook(doc){                               // links inside the page keep the visitor inside the pane
+  doc.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest("a[href]"); if (!a) return;
+    e.preventDefault();
+    const raw = a.getAttribute("href");
+    if (raw.startsWith("#")){ const t = doc.getElementById(decodeURIComponent(raw.slice(1))); if (t) t.scrollIntoView(); return; }
+    const url = norm(a.href.split("#")[0]); if (url) openWeb(where().fig, url);
+  });
+  doc.addEventListener("keydown", keys);
+  themeFrame();
+}
+
+function openWeb(fig, url, terms, label, near){         // go to a web page; with terms, mark the answer on it
+  url = norm(url); if (!url) return;
+  want = { url, terms: terms || [], label: label || "", near: near || "" };
+  const h = "#/" + fig + "/web/" + encodeURIComponent(url);
+  if (location.hash === h){ pulse(); showWeb(url); } else location.hash = h;
+}
+async function showWeb(url){
+  const frame = $("web"), token = ++loadToken;
+  target = url;
+  if (ready !== url){
+    $("load").classList.add("busy");
+    let pg; try { pg = await getPage(url); } catch { pg = errorPage(url); }
+    if (token === loadToken) $("load").classList.remove("busy");
+    if (token !== loadToken) return;
+    await new Promise(res => { frame.onload = res; frame.srcdoc = pg.html; });
+    if (token !== loadToken) return;
+    ready = url; hook(frame.contentDocument);
+  }
+  if (where().url !== url) return;
+  document.title = (pages.get(url) || {}).title || url;
+  const doc = frame.contentDocument;
+  if (want && want.url === url && (want.terms.length || want.near)){
+    const cited = want.near && [...doc.body.querySelectorAll("p,li,dd,blockquote")].find(b => clean(b.textContent).startsWith(want.near));
+    const pick = cited || (bestBlock(doc.body, want.terms) || {}).el;
+    if (want.terms.length) runFind(rx(want.terms), want.label || want.terms.join(" "), pick);
+    else { runFind(null); if (pick){ pick.classList.add("best"); pick.scrollIntoView({ block:"center" }); } }
+  } else { runFind(null); doc.scrollingElement.scrollTop = scrolls.get(url) || 0; }   // back where the visitor left off
+}
+
+/* ----- where to look -----
+   A question put to a figure is about that figure, so the figure's own article
+   is always read first and is the default answer. Another article is consulted
+   only for words the figure's article does not contain at all (a ship, a place,
+   another person), and only if that article also mentions the figure. That
+   keeps unrelated people out. */
+const fullName = fig => new RegExp(["bg", "en"].map(l => words(FIGURES[fig].t[l].title).map(esc).join("[\\s\\u00a0]+")).join("|"), "iu");
+function missingFrom(rows, terms){                // question words the figure's own article never uses
+  const seen = new Set(); rows.forEach(r => r.got.forEach(g => seen.add(g)));
+  const gone = [...new Set(terms.map(t => CANON.get(t) || t))].filter(g => !seen.has(g));
+  return { terms: terms.filter(t => gone.includes(CANON.get(t) || t)), words: gone.map(g => FULL.get(g) || g) };
+}
+const leadOf = pg => [...pg.doc.body.querySelectorAll("p")].find(p => !p.closest(SKIP) && p.textContent.trim().length > 80);
+
+const searched = new Map();                        // search text -> results, so nothing is searched twice
+async function searchWiki(wordsToFind, t, home){   // other Wikipedia articles, searched together with the figure's name
+  const key = lang + "|" + wordsToFind.join(" ") + "|" + t.title;
+  if (searched.has(key)) return searched.get(key);
+  try {
+    const j = await (await fetch("https://" + lang + ".wikipedia.org/w/api.php?action=query&list=search&srlimit=4&format=json&origin=*&srsearch=" + encodeURIComponent(wordsToFind.join(" ") + " " + t.title))).json();
+    const found = ((j.query && j.query.search) || []).map(s => wikiUrl(lang, s.title)).filter(u => u !== home);
+    searched.set(key, found); return found;
+  } catch { return []; }
+}
+// Passages from other articles for the words the own article lacks; only articles that mention the figure.
+async function elsewhere(fig, t, miss, home){
+  if (!miss.terms.length) return [];
+  const mine = fullName(fig), out = [];
+  for (const url of (await searchWiki(miss.words, t, home)).slice(0, 3)){
+    try {
+      const pg = await getPage(url);
+      if (!mine.test(pg.doc.body.textContent)) continue;                        // does not name this figure: unrelated
+      const rows = rank(pg.doc.body, miss.terms);
+      if (rows.length) out.push({ url, pg, rows });
+    } catch {}
+    if (out.length >= 2) break;
+  }
+  return out;
+}
+
+// Passages for the chatbot to read: the figure's own article first, always.
+async function gather(fig, t, q){
+  const terms = keyTerms(q, fig), home = wikiUrl(lang, FIGURES[fig].web[lang]), out = [];
+  const add = (pg, url, node, head, own) => { const text = clean(node.textContent).slice(0, 700); if (text.length > 40 && !out.some(o => o.text === text)) out.push({ url, title:pg.title, section:head || "", own, text }); };
+  try {
+    const pg = await getPage(home), rows = rank(pg.doc.body, terms), lead = leadOf(pg);
+    if (lead) add(pg, home, lead, "", true);
+    rows.slice(0, 5).forEach(b => add(pg, home, b.el, b.head, true));
+    for (const o of await elsewhere(fig, t, missingFrom(rows, terms), home)) o.rows.slice(0, 2).forEach(b => add(o.pg, o.url, b.el, b.head, false));
+  } catch {}
+  return out.slice(0, 9);
+}
+
+// Stand-in when there is no chat backend: show the best passage and speak a prepared line.
+async function webAnswer(fig, t, q){
+  const terms = keyTerms(q, fig), home = wikiUrl(lang, FIGURES[fig].web[lang]);
+  let pg; try { pg = await getPage(home); } catch { return null; }
+  const rows = rank(pg.doc.body, terms), mine = demoReply(fig, t, q);
+  const say = !terms.length ? FIGURES[fig].about[lang]            // "who are you?": the figure introduces itself
+            : mine.navigate_to !== "/library" ? mine.text          // its own words about that part of its life
+            : UI[lang].found;
+  const other = (await elsewhere(fig, t, missingFrom(rows, terms), home))[0];
+  const at = node => clean(node.textContent).slice(0, 60);          // so the highlight lands on this very passage
+  if (other) return { text:say, open:{ url:other.url, terms, label:q, near:at(other.rows[0].el), title:other.pg.title, snippet:snip(other.rows[0].el.textContent) } };
+  if (rows.length) return { text:say, open:{ url:home, terms, label:q, near:at(rows[0].el), title:pg.title, snippet:snip(rows[0].el.textContent) } };
+  const lead = leadOf(pg);                         // a general question ("tell me about yourself"): the opening of the own article
+  if (!terms.length && lead) return { text:say, open:{ url:home, terms:[], label:"", near:clean(lead.textContent).slice(0, 60), title:pg.title, snippet:snip(lead.textContent) } };
+  return null;
+}
+
+/* ---------- CHAT ---------- */
+function draw(text, who, ev){
+  const m = el("div", text, "msg " + who);
+  if (ev && ev.web){                              // what the page says, and a way back to it
+    const w = ev.web, a = el("a", "↳ " + w.title + " · " + new URL(w.url).hostname, "why");
+    if (w.snippet) m.append(el("blockquote", w.snippet));
+    a.href = w.url; a.addEventListener("click", e => { e.preventDefault(); openWeb(ev.fig, w.url, w.terms, w.label, w.near); });
+    m.append(a);
+  } else if (ev){                                 // link back to the highlighted proof
+    const a = el("a", "↳ " + UI[lang].proof, "why"); a.href = link(ev.fig, ev.r);
+    a.addEventListener("click", e => { e.preventDefault(); go(ev.fig, ev.r, ev.p, ev.quote); });
+    m.append(a);
+  }
+  $("log").append(m); $("log").scrollTop = $("log").scrollHeight; return m;
+}
+function addMsg(fig, text, who, ev){ msgs[fig].push({ text, who, ev }); if (shown === fig) draw(text, who, ev); }
+
+/* Offline stand-in: when the web cannot be reached, find the section and the
+   paragraph of the built-in library pages that best match the question. */
+const stems = s => (s.toLowerCase().match(/[\p{L}\d]{4,}/gu) || []).map(w => w.slice(0, 5));
+function demoReply(fig, t, q){
+  q = hear(q);
+  const qs = stems(q);
+  const score = x => { const low = x.toLowerCase(); return qs.filter(s => low.includes(s)).length; };
+  const bestIn = r => (t.pages[r].p || []).reduce((b, x, i) => score(x) > b.s ? { s:score(x), p:i + 1 } : b, { s:0, p:0 });
+  const hit = t.demo.find(d => d[0].test(q));
+  if (hit) return { text:hit[3], navigate_to:hit[1], evidence:{ p:bestIn(hit[1]).p || hit[2] } };
+  let top = { s:0 };
+  FIGURES[fig].routes.forEach(r => { if (r === "/library") return; const b = bestIn(r); if (b.s > top.s) top = { s:b.s, p:b.p, r }; });
+  if (!top.s) return { text:t.fallback, navigate_to:"/library" };
+  const line = t.demo.find(d => d[1] === top.r);
+  return { text: line ? line[3] : t.fallback, navigate_to:top.r, evidence:{ p:top.p } };
+}
+
+async function ask(q){
+  if (busy) return; busy = true; $("send").disabled = true;
+  const { fig, r } = where(), t = FIGURES[fig].t[lang];
+  addMsg(fig, q, "user"); histories[fig].push({ role:"user", content:q });
+  const wait = draw(t.wait, "aleko wait");
+  let reply;
+  try {                                           // 1. the real chatbot: it reads passages from the web, then answers in its own words
+    wait.textContent = UI[lang].searching;
+    const passages = await gather(fig, t, q);
+    wait.textContent = t.wait;
+    const res = await fetch(API_URL, { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ figure:fig, lang, route:r, messages:histories[fig].slice(-MAX_TURNS), passages }) });
+    if (!res.ok) throw new Error(res.status);
+    reply = await res.json();
+    if (typeof reply.text !== "string") throw new Error("bad reply");
+    if (reply.open && !reply.open.terms){ reply.open.terms = keyTerms(reply.open.find || "", fig); reply.open.label = reply.open.find || ""; }
+  } catch { reply = (await webAnswer(fig, t, q)) || demoReply(fig, t, q); }   // 2. no chatbot: prepared line + the web  3. the built-in pages
+  wait.remove();
+  const o = reply.open, url = o && norm(o.url || "");
+  const to = FIGURES[fig].routes.includes(reply.navigate_to) ? reply.navigate_to : null, e = reply.evidence;
+  const ev = url ? { fig, web:{ url, terms:o.terms || [], label:o.label || "", near:o.near || "", title:o.title || new URL(url).hostname, snippet:o.snippet || "" } }
+    : to && e && e.p > 0 && e.p <= (t.pages[to].p || []).length ? { fig, r:to, p:e.p, quote:e.quote } : null;
+  addMsg(fig, reply.text, "aleko", ev); histories[fig].push({ role:"assistant", content:reply.text });
+  if (where().fig === fig){                       // visitor may have switched figure meanwhile
+    speak(fig, reply.text);
+    if (url) openWeb(fig, url, ev.web.terms, ev.web.label, ev.web.near);
+    else if (to) go(fig, to, ev && ev.p, ev && ev.quote);
+  }
+  busy = false; $("send").disabled = false; $("input").focus();
+}
+
+/* ---------- EVENTS ---------- */
+$("form").addEventListener("submit", e => { e.preventDefault(); const q = $("input").value.trim(); if (q){ $("input").value = ""; ask(q); } });
+$("voiceBtn").addEventListener("click", () => { voice = !voice; if (!voice) stopSpeech(); render(); });
+$("themeBtn").addEventListener("click", () => { root.dataset.theme = isDark() ? "light" : "dark"; store.set("theme", root.dataset.theme); render(); themeFrame(); });
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => {
+  lang = b.dataset.lang; store.set("lang", lang); stopSpeech(); render();
+  $("log").replaceChildren(); msgs[where().fig].forEach(m => draw(m.text, m.who, m.ev));
+}));
+addEventListener("hashchange", () => {
+  saveScroll();
+  const w = where();
+  if (mark && (mark.fig !== w.fig || mark.r !== w.r)) mark = null;   // visitor walked elsewhere
+  render(); pulse(); toMark();
+  if (w.url) showWeb(w.url);
+});
+
+/* Browser chrome: back, forward, home, and an address bar that takes library
+   addresses, web addresses and questions. */
+const asUrl = v => {
+  if (/\s/.test(v)) return null;
+  if (!/^https?:\/\//i.test(v)){ if (!/^[\w-]+(\.[\w-]+)+(\/|$)/.test(v)) return null; v = "https://" + v; }
+  return norm(v);
+};
+$("backBtn").addEventListener("click", () => history.back());
+$("fwdBtn").addEventListener("click", () => history.forward());
+$("homeBtn").addEventListener("click", () => go(where().fig, "/library"));
+$("reloadBtn").addEventListener("click", () => { const u = where().url; if (!u) return render(); pages.delete(u); ready = null; pulse(); showWeb(u); });
+$("outBtn").addEventListener("click", () => { const u = where().url; if (u) window.open(u, "_blank", "noopener"); });
+$("addr").addEventListener("focus", e => e.target.select());
+$("addrForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("addr").value.trim(), m = v.match(/^(?:library:\/\/)?([a-z]+)(\/[a-z-]+)?\/?$/), url = asUrl(v);
+  $("addr").blur();
+  if (m && FIGURES[m[1]]) go(m[1], FIGURES[m[1]].routes.includes(m[2]) ? m[2] : "/library");   // a library address
+  else if (url) openWeb(where().fig, url);                                                     // a web address
+  else if (v) ask(v);                                                                          // anything else is a question
+  render();
+});
+
+/* Find bar: F3 / Shift+F3 step through matches, Ctrl+F opens it, Esc closes it. */
+function keys(e){
+  if (e.key === "F3"){ e.preventDefault(); step(e.shiftKey ? -1 : 1); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f"){ e.preventDefault(); $("find").hidden = false; $("findq").focus(); $("findq").select(); }
+  else if (e.key === "Escape" && !$("find").hidden){ runFind(null); }
+}
+addEventListener("keydown", keys);
+$("find").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("findq").value.trim();
+  if (!v || v === find.q) return step(1);
+  runFind(new RegExp(esc(v), "giu"), v);
+  const lat = words(v).filter(isLatin);
+  if (!find.hits.length && lang === "bg" && lat.length) runFind(rx(lat.flatMap(w => cyr(w).map(stem))), v);
+});
+$("findPrev").addEventListener("click", () => step(-1));
+$("findNext").addEventListener("click", () => step(1));
+$("findClose").addEventListener("click", () => runFind(null));
+
+render();
+if (where().url) showWeb(where().url);
+fetch("/api/status").then(r => r.ok ? r.json() : {}).then(j => { chatOn = !!j.chat; }).catch(() => { chatOn = false; }).then(render);
+</script>
+</body>
+</html>
