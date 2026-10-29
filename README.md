@@ -1,9 +1,12 @@
-# Interactive library of historical figures
+# Говорещи портрети / Talking Portraits
 
-A bilingual (Bulgarian / English) educational site where a historical figure
-answers visitors' questions out loud in a male voice, takes them to the
-matching section of the site, and highlights the paragraph that backs up the
-answer.
+A bilingual (Bulgarian / English) educational site shaped like a small
+library. Take a figure's book from the shelf, a skeleton's hand opens it, and
+the figure answers your questions out loud in a male voice. Every answer gets
+its own page in the book, with a picture and the source passage that proves
+it highlighted.
+
+Made by **The Goat Soft**.
 
 Figures: **Aleko Konstantinov**, **Hristo Botev**, **Vasil Levski**,
 **Ivan Vazov**.
@@ -12,11 +15,12 @@ Figures: **Aleko Konstantinov**, **Hristo Botev**, **Vasil Levski**,
 
 | File | What it is |
 |---|---|
-| `index.html` | The whole site: every figure and section, both languages, the guide panel, dark mode. |
-| `server.js` | Optional small backend: serves the page and provides a studio male voice. |
+| `index.html` | The whole site in one file: the library, the book opening, the pages, the conversation, both languages, dark mode. |
+| `server.js` | Optional small backend: the chatbot, a studio male voice, and pages from other sites. |
 | `aleko.json`, `botev.json`, `levski.json`, `vazov.json` | Who each figure is for the chatbot: tone, what they can know, voice speed and pitch. |
 | `start.bat`, `start.command` | Double-click launchers for Windows and Mac: start the server and open the site. |
-| `.env` | Your API keys. Private; never share it. |
+| `.env.example` | Template for your API keys: copy it to `.env`. `.env` is private and ignored by git. |
+| `.gitignore` | Keeps `.env` out of the repository. |
 | `README.md` | This file. |
 
 Only `index.html` is needed to use the site.
@@ -45,31 +49,57 @@ page and the browser voice is used.
 
 ## Layout
 
-The site works like a small browser with the guide beside it, and the visitor
-never leaves the page.
+**Home page: the library.** A shelf of cloth-bound books, one per figure,
+with a few unmarked volumes for figures still to come. Below the shelf is the
+chronicle: the four lives on one time axis, and the moments their paths cross
+(Levski and Botev sharing the mill near Bucharest, for example).
 
-- **Tabs:** one per figure.
-- **Toolbar:** back, forward, home, and an address bar such as
-  `library://botev/poetry`. Typing an address opens it; typing anything else
-  asks the figure.
-- **Bookmarks bar:** the sections of the current figure.
-- **Guide:** stays on screen the whole time. When it answers, it opens the
-  right page in the browser pane for the visitor.
+**Opening a book.** Clicking a book takes it from the shelf and lands it on a
+candlelit desk; a 3D skeleton's hand (WebGL) reaches in, grips the cover and
+opens it, the pages riffle, and the open book glides into place as the book
+you read, with the conversation beside it on the right. With "reduce motion" set on the device,
+the book opens at once.
 
-On a phone the browser is on top and the guide is docked underneath.
+**Inside a book** everything is set as real pages, two facing pages at a
+time (one on a phone), with running heads, page numbers and a page turn you
+can see:
+
+- **The book (left):** the figure's chapters, the web articles that back up
+  answers, and a new page for every answer. Turn pages with ‹ ›, the arrow
+  keys, Page Up / Page Down, the mouse wheel or a swipe. Moving to another
+  chapter or article turns the page too.
+- **The conversation (right):** the figure's portrait, the chat, suggested
+  questions and the microphone (Chrome and Edge; the browser sends the
+  audio to its own speech service to recognise it).
+- **Toolbar:** back, Library (returns to the shelf), ⟳ (clears every
+  highlight), ↗ (the original web page, when an article is open), light or
+  dark, and the language. The chapters run along the top.
+
+**On a phone** one page fills the screen and the conversation is a sheet at
+the bottom showing the last reply, the suggested questions and the input.
+Swipe it up (or tap it) to see the whole conversation, swipe down to read.
 
 ## How an answer works
 
-1. The visitor asks a question in the guide panel (or the address bar).
-2. The browser pane opens a real web page: first the figure's own Wikipedia
-   article in the visitor's language, and if the answer is not there, the best
-   result of a Wikipedia search.
-3. Every place the question's key words appear is marked, as in a browser's
-   find-in-page, and the page scrolls to the passage that matches best.
-4. A find bar shows the count ("1 / 7"). F3 and Shift+F3 (or the arrows) step
-   through the matches, Ctrl+F searches the open page for anything, Esc closes.
-5. The figure replies out loud, and the chat keeps a short quote from the page
-   with a link back to it.
+1. The visitor asks a question in the conversation.
+2. The figure's own Wikipedia article is read first; other articles only for
+   words it never uses, and only if they mention the figure.
+3. The figure replies out loud, and the book turns to **a new page written
+   for that answer**, set like a page of an illustrated history:
+   - the question as a heading and the figure's reply as an epigraph;
+   - the facts under their own heading, with a picture from the source set
+     as a plate with its caption (the picture nearest the passage in the
+     article, else the article's main picture, else the portrait);
+   - the passage that proves the answer, highlighted, with the question's
+     words marked (F3 / Shift+F3 step through them, Ctrl+F searches);
+   - a footnote naming the source, with a link that sets the whole article
+     in the book at the highlighted passage.
+4. With the chatbot on, the facts on that page are a short text the chatbot
+   writes from the source for the book (third person, only facts from the
+   passages), followed by the passage itself under "From the source".
+   Without the chatbot, the passage and the paragraphs on either side of it
+   are the text of the page.
+5. The chat keeps a link back to each answer's page.
 
 **Where it looks.** A question put to a figure is treated as a question
 about that figure, so the figure's own article is always read first and is the
@@ -85,10 +115,13 @@ Questions in Latin-letter Bulgarian are matched against the Cyrillic text by
 trying the likely spellings of each word (j as ж or й, a as а or ъ, 4 as ч,
 6 as ш, and so on). The find bar does the same when nothing matches as typed.
 
-**It is a working browser.** Links inside a page open in the pane, back and
-forward work, and a web address typed in the address bar opens that site.
+**Web articles inside the book.** Articles are cleaned (no scripts, frames,
+forms, styles or event handlers) and set as book pages in the book's type:
+the infobox picture becomes the frontispiece, pictures become plates, and
+navigation boxes and reference lists are left out. Links inside an article
+open in the book, and back works.
 
-- Reload (⟳) fetches the page again, and ↗ opens the original site in a new
+- ↗ opens the original site in a new
   browser tab, which helps for sites that need scripts.
 - Going back returns to where you had scrolled on the earlier page.
 - Wikipedia pages are read straight from Wikipedia and need no server.
@@ -96,28 +129,30 @@ forward work, and a web address typed in the address bar opens that site.
   browser will not let one site read another.
 - Pages are shown with their scripts removed, for safety. Plain article sites
   work well; sites built entirely with scripts show little or nothing.
-- With no internet, the guide falls back to the built-in library pages and
+- With no internet, the figure falls back to the built-in chapters and
   highlights the matching paragraph there.
 
-The built-in pages remain as each figure's home page (the home button).
+Each book's built-in chapters stay one click away along the top of the book.
 
 ## The chatbot
 
 With an API key the figures answer in their own words, like a normal chatbot,
 and stay in character. Two providers are supported; use whichever key you have.
 
-| Provider | Where to get a key | 
+| Provider | Where to get a key | Line in the start file | Default model |
+|---|---|---|---|
+| Claude (Anthropic) | https://console.anthropic.com | `ANTHROPIC_API_KEY` | `claude-haiku-4-5-20251001` |
+| Gemini (Google) | https://aistudio.google.com | `GOOGLE_API_KEY` | `gemini-3.5-flash-lite` |
 
-| Claude (Anthropic) https://platform.claude.com/
-| Gemini (Google) https://aistudio.google.com/api-keys
-
-1. Open the file named `.env` in a text editor (Notepad is fine).
+1. Copy `.env.example` to a new file named `.env` beside it, and open it in a
+   text editor (Notepad is fine).
 2. Paste your key after the `=` on the matching line, with no spaces or
    quotes, for example `GOOGLE_API_KEY=abc123`. Save.
 3. Start the site with `start.bat` or `start.command`. The window says which
    chatbot is in use.
 
-Keep `.env` private and do not share it or upload it anywhere. If you cannot
+Keep `.env` private: never commit it or upload it anywhere (it is listed in
+`.gitignore`). If you cannot
 see the file, turn on "show hidden files" (Mac: Cmd+Shift+. in Finder).
 
 If both keys are set, Claude is used unless you add `CHAT_PROVIDER=google`.
@@ -189,16 +224,19 @@ The page calls two endpoints and falls back gracefully if either is missing.
 ```
 request:  { figure, lang, route, messages: [{ role, content }],
             passages: [{ url, title, text }] }
-response: { text, navigate_to, evidence: { p, quote } }
+response: { text, navigate_to, evidence: { p, quote }, open, page }
 ```
 
 - `navigate_to`: a route from the figure's list, or `null`.
 - `evidence.p`: number of the paragraph (from 1) in that section to highlight.
 - `evidence.quote`: optional exact phrase inside that paragraph to mark.
-- `open`: optional `{ url, find }`. Opens that web page in the pane and marks
-  the words in `find`. When present it is used in place of `navigate_to`.
+- `open`: optional `{ url, title, find, near, snippet }`: the passage the answer
+  rests on. When present, a new page is written for the answer and used in
+  place of `navigate_to`.
+- `page`: optional `{ heading, paragraphs: [..], caption }`: the chatbot's
+  text for that page. server.js asks the model for it and checks it.
 
-`GET /api/page?url=...` returns `{ url, html }` for the browser pane. It only
+`GET /api/page?url=...` returns `{ url, html }` for a non-Wikipedia article. It only
 fetches public web addresses, never this computer or the local network. It is
 meant for local use; do not put it on the open internet as it is.
 
@@ -216,12 +254,39 @@ Keep API keys on the server; the page never sees them.
 1. In `index.html`, add a strings object shaped like `LEVSKI` or `VAZOV`
    (pages, facts and demo replies in both languages).
 2. Add one entry to `FIGURES` with its Wikipedia title, years, monogram,
-   routes and sources.
-
+   routes and sources, and its two colours in the style sheet (`--c-<id>`
+   for its pages, `--cloth-<id>` for its binding). Its book appears on the
+   shelf on its own.
 3. Add `<id>.json` beside `server.js`, shaped like `levski.json`, so the
    chatbot knows who is speaking.
 
 Nothing else changes: the page logic and the server are shared by all figures.
+
+## Legal pages (fill in before publishing)
+
+Every page ends with a footer linking to: About (who runs the site), Privacy,
+Artificial intelligence, Sources and licences, and Accessibility. Near the end
+of `index.html`, in `const SITE = {...}`, replace the placeholders with your
+name or organisation, postal address and contact email; they appear on those
+pages.
+
+What the site does to keep the legal side simple:
+
+- **No cookies, no analytics, no tracking.** Only the language and theme
+  choice is kept in the browser.
+- **No Google Fonts.** Loading them would send every visitor's IP address to
+  Google, so the typeface (Old Standard TT, SIL Open Font License) is
+  embedded in the page.
+- **AI notice.** The chat panel always says the figures are AI simulations
+  (EU AI Act transparency), with a link to a page explaining it.
+- **Microphone notice.** Before the first use, visitors are told that their
+  browser sends the recording to its speech service.
+- **Wikipedia credit.** Built-in texts and live articles carry links to the
+  article, its authors (history) and the CC BY-SA 4.0 licence.
+
+These pages are a sound starting point, not legal advice. Have them checked
+before launch, especially the privacy page, and update it if you add
+analytics, accounts or anything else that collects data.
 
 ## Sources and accuracy
 
@@ -237,4 +302,16 @@ Nothing else changes: the page logic and the server are shared by all figures.
 Have a historian or literature teacher check the text before it is used in
 a classroom.
 
+## Not built yet
 
+- **3D avatars.** The oval portrait is a placeholder; mount a canvas in
+  `#avatar`. It gets the class `speaking` while the figure talks.
+- **Portraits** are loaded from Wikipedia when the page opens; offline, a
+  monogram is shown.
+
+## Licence
+
+The texts about the figures are adapted from Wikipedia and are shared under
+CC BY-SA 4.0. The embedded typeface, Old Standard TT, is under the SIL Open
+Font License 1.1. Choose a licence for the code before publishing (add a
+`LICENSE` file).
